@@ -1,0 +1,2 @@
+
+1704816367087 :: history :: {'symbol': 'NSE:NIFTYBANK-INDEX', 'resolution': '5', 'date_format': '1', 'range_from': '2023-01-18', 'range_to': '2023-01-18', 'cont_flag': '1'} :: 1704816367273 :: {'s': 'error', 'code': -17, 'message': 'Could not authenticate the user'}
