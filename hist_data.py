@@ -51,6 +51,7 @@ data = {"symbol": "NSE:SBIN-EQ", "resolution": "5", "date_format": "1",
          "range_from": "2023-01-18", "range_to": "2023-01-18", "cont_flag": "1"}
 
 print(fyers.history(data))
+
  
 
 
