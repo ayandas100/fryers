@@ -59,4 +59,4 @@ print(fyers.history(data))
 #lowest value
 #close value
 #total traded quantity
- 
+# removed adjusted closing price 
