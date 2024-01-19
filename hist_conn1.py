@@ -12,8 +12,8 @@ from fyers_api.Websocket import ws
 import datetime as dt
 # load_dotenv()
 
-client_id = "15YI17TORX-100"
-secret_key = "S5XP6AHG26"
+client_id = "N3VPS274OH-100"
+secret_key = "MONNT2QWHX"
 redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
 response_type = "code"
 grant_type = "authorization_code"
@@ -42,7 +42,7 @@ def get_access_token():
             access = f.read()
     return access
 access_token = get_access_token()
-print(access_token)
+print("Access token:" + access_token)
 
 fyers = fyersModel.FyersModel(
     client_id=client_id, token=access_token, log_path=os.getcwd())
@@ -51,7 +51,6 @@ data = {"symbol": "NSE:SBIN-EQ", "resolution": "5", "date_format": "1",
          "range_from": "2023-01-18", "range_to": "2023-01-18", "cont_flag": "1"}
 
 print(fyers.history(data))
- 
 
 
 #current epoch time
