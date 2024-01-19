@@ -47,7 +47,7 @@ print(access_token)
 fyers = fyersModel.FyersModel(
     client_id=client_id, token=access_token, log_path=os.getcwd())
 
-data = {"symbol": "NSE:SBIN-EQ", "resolution": "5", "date_format": "1",
+data = {"symbol": "NSE:NIFTY50", "resolution": "5", "date_format": "1",
          "range_from": "2023-01-18", "range_to": "2023-01-18", "cont_flag": "1"}
 
 print(fyers.history(data))
