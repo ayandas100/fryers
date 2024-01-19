@@ -3,11 +3,11 @@ Created on Aug 9, 2023
 
 @author: ayan
 '''
-from fyers_api import fyersModel
+from fyers_apiv3 import fyersModel
 from fyers_api import accessToken
 
-client_id = "N3VPS274OH-100"
-access_token = "MONNT2QWHX"
+client_id = "15YI17TORX-100"
+access_token = "S5XP6AHG26"
 redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
 response_type = "code"
 

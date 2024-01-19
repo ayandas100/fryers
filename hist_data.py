@@ -42,7 +42,7 @@ def get_access_token():
             access = f.read()
     return access
 access_token = get_access_token()
-print(access_token)
+print("Access token:" + access_token)
 
 fyers = fyersModel.FyersModel(
     client_id=client_id, token=access_token, log_path=os.getcwd())
