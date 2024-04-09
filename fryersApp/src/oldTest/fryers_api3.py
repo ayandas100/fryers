@@ -1,0 +1,49 @@
+'''
+Created on Aug 11, 2023
+
+@author: ayan
+'''
+from datetime import date
+from fyers_api import fyersModel
+from fyers_api import accessToken
+import os
+# from dotenv import load_dotenv
+from fyers_api.Websocket import ws
+import datetime as dt
+# load_dotenv()
+
+client_id = "N3VPS274OH-100"
+secret_key = "MONNT2QWHX"
+redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
+response_type = "code"
+grant_type = "authorization_code"
+
+today = date.today().strftime("%Y-%m-%d")
+
+
+def get_access_token():
+    access = ""
+    if not os.path.exists("./authcode"):
+        print("Creating authcode directory")
+        os.makedirs("./authcode")
+
+    if not os.path.exists(f"authcode/{today}.txt"):
+        session = accessToken.SessionModel(client_id=client_id, secret_key=secret_key,
+                                           redirect_uri=redirect_uri, response_type="code", grant_type="authorization_code")
+        response = session.generate_authcode()
+        print("Login Url : ", response)
+        auth_code = input("Enter Auth Code : ")
+        session.set_token(auth_code)
+        access_token = session.generate_token()["access_token"]
+        print(access_token)
+        # with open(f"authcode/{today}.txt", "w") as f:
+        #     f.write(access_token)
+    else:
+        with open(f"authcode/{today}.txt", "r") as f:
+            access = f.read()
+    return access
+# access_token = get_access_token()
+# print(access_token)
+
+if __name__ == "__main__":
+    get_access_token()
