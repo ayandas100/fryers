@@ -1,16 +1,14 @@
 '''
-Created on Aug 11, 2023
+Created on 13-Apr-2024
 
-@author: ayan
+@author: User
 '''
 from datetime import date
 from fyers_api import fyersModel
 from fyers_api import accessToken
 import os
-# from dotenv import load_dotenv
-from fyers_api.Websocket import ws
+from fyers_apiv3 import fyersModel
 import datetime as dt
-# load_dotenv()
 
 client_id = "N3VPS274OH-100"
 secret_key = "MONNT2QWHX"
@@ -51,13 +49,4 @@ data = {"symbol": "NSE:NIFTY50-INDEX", "resolution": "5", "date_format": "1",
          "range_from": "2023-01-18", "range_to": "2023-01-18", "cont_flag": "1"}
 
 print(fyers.history(data))
- 
-
-
-#current epoch time
-#open value
-#highest value
-#lowest value
-#close value
-#total traded quantity
  
