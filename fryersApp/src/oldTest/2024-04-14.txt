@@ -1,0 +1,4 @@
+
+1713077021171 :: history :: {'symbol': 'NSE:NIFTY50-INDEX', 'resolution': '5', 'date_format': '1', 'range_from': '2023-01-18', 'range_to': '2023-01-18', 'cont_flag': '1'} :: 1713077021380 :: {'s': 'error', 'code': -300, 'message': 'Please provide a valid symbol'}
+
+1713077027978 :: history :: {'symbol': 'NIFTY50-INDEX', 'resolution': '5', 'date_format': '1', 'range_from': '2023-01-18', 'range_to': '2023-01-18', 'cont_flag': '1'} :: 1713077028144 :: {'s': 'error', 'code': -300, 'message': 'Please provide a valid symbol'}
