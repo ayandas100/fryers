@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supertrend Bot Launcher</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow-lg">
+                    <div class="card-header text-center bg-primary text-white">
+                        <h4>🚀 Start Supertrend Bot</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="access_token" class="form-label">Access Token</label>
+                                <input type="text" class="form-control" id="access_token" name="access_token" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ce_symbol" class="form-label">Call Option (CE) Symbol</label>
+                                <input type="text" class="form-control" id="ce_symbol" name="ce_symbol" placeholder="e.g. NIFTY24518400CE" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pe_symbol" class="form-label">Put Option (PE) Symbol</label>
+                                <input type="text" class="form-control" id="pe_symbol" name="pe_symbol" placeholder="e.g. NIFTY24518400PE" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="stop_loss" class="form-label">Stop Loss</label>
+                                <input type="number" class="form-control" id="stop_loss" name="stop_loss" step="0.01" value="10.0" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="target" class="form-label">Target</label>
+                                <input type="number" class="form-control" id="target" name="target" step="0.01" value="20.0" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success">Start Bot</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-center text-muted">
+                        <small>Developed by Ayan 💻</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

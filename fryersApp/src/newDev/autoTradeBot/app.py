@@ -1,22 +1,32 @@
-from flask import Flask, render_template, request
-# from supertrend_bot import start_bot
+from flask import Flask, render_template, request, jsonify
+from fetchStrikeData import start_bot
+import pandas as pd
 
 app = Flask(__name__)
+session = {}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        token = request.form['access_token']
-        symbol = request.form['symbol']
-        stop_loss = float(request.form['stop_loss'])
-        target = float(request.form['target'])
-
-        # Start your bot with these values
-        # start_bot(token, symbol, stop_loss, target)
-
-        return "🚀 Bot Started Successfully!"
-
+        session['token'] = request.form['access_token']
+        session['ce_symbol'] = request.form['ce_symbol']
+        session['pe_symbol'] = request.form['pe_symbol']
+        return render_template('result.html')  # triggers auto-refresh
     return render_template('index.html')
+
+@app.route('/data')
+def get_data():
+    try:
+        ce_table = start_bot(session['ce_symbol'], session['token'])
+        pe_table = start_bot(session['pe_symbol'], session['token'])
+
+        # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
+        # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
+
+        return jsonify({'ce_table': ce_table, 'pe_table': pe_table})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
