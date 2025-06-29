@@ -12,7 +12,7 @@ def index():
         target = float(request.form['target'])
 
         # Start your bot with these values
-        start_bot(token, symbol, stop_loss, target)
+        # start_bot(token, symbol, stop_loss, target)
 
         return "🚀 Bot Started Successfully!"
 
