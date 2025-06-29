@@ -72,7 +72,7 @@ df_candle["timestamp"] = (
 
 
 
-print(df_candle.head(30))
+print(df_candle.head(20))
 
 
 
