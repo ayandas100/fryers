@@ -22,6 +22,8 @@ pd.set_option('display.max_colwidth', None)
 import duckdb as db
 import pandas_ta as ta
 from placeOrder import check_order_status
+from bs4 import BeautifulSoup
+
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
@@ -81,7 +83,7 @@ def gen_AcessTok(auth_code):
 
 
 def highlight_supertrend(row):
-    supertrend = row['supertrend']
+    supertrend = row['STrend']
     close = row['close']
     
     if pd.isna(supertrend) or pd.isna(close):
@@ -90,7 +92,7 @@ def highlight_supertrend(row):
     styles = [''] * len(row)
     
     # Get column index of 'supertrend'
-    st_index = row.index.get_loc('supertrend')
+    st_index = row.index.get_loc('STrend')
 
     if supertrend < close:
         styles[st_index] = 'background-color: lightgreen'
@@ -159,24 +161,37 @@ def start_bot(symb,auth_code):
     df = df_candle
     df["symbol"] = symb
     df['MA20'] = df['close'].rolling(window=20).mean()
-    df['Above_MA20'] = df['close'] > df['MA20']
-    df = df[['symbol','timestamp','open','close','SUPERT_11_2.0','MA20','Above_MA20']].rename(columns={'SUPERT_11_2.0':'supertrend'})
+    # df['Above_MA20'] = df['close'] > df['MA20']
+    df = df[['symbol','timestamp','open','close','SUPERT_11_2.0','MA20']].rename(columns={'SUPERT_11_2.0':'supertrend'})
     df_hist = df.sort_values(by='timestamp', ascending=False)
     # print(df_hist.head(20))
-    
+    df_hist['Above_MA20'] = df_hist['close'] > df_hist['MA20']
+    df_hist['next_Above_MA20'] = df_hist['Above_MA20'].shift(-1)
+    df_hist['20 CXover'] = (df_hist['Above_MA20'] == True) & (df_hist['next_Above_MA20'] == False)
+    df_hist['Above ST'] = df['close'] > df['supertrend']
+
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_hist a" \
 "               join df_ltp b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
+    df = df[['timestamp','open','close','ltp','supertrend','20 CXover','Above ST']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'STrend'})
+    df = df.reset_index(drop=True)
+    df.index.name = None
     df = df.head(20)
 
     fyers = fryersOrder(auth_code)
     check_order_status(fyers)
     
-    styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2).to_html(index=False,table_attributes='class="table table-bordered table-hover table-sm"')
 
+    styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2)\
+                    .set_table_styles(
+                        [{'selector': 'td', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]},
+                        {'selector': 'th', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]}]
+                    )\
+                    .to_html(index=False, table_attributes='class="table table-bordered table-hover table-sm w-100"')
 
+   
     return styled_html
 
 

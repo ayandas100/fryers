@@ -12,6 +12,17 @@
             background-color: #f8f9fa;
         }
     </style>
+<style>
+    table {
+        width: 100% ;
+        table-layout: fixed; /* Optional: distributes space evenly */
+    }
+    th, td {
+        text-align: center;
+        padding: 8px;
+        min-width: 100px;
+    }
+</style>    
 </head>
 <body class="bg-light">
 <div class="text-center my-4">
@@ -25,10 +36,12 @@
 
     <div class="row">
         <div class="col-md-6">
+            <h5 class="text-center" id="ce-title">{{ ce_symbol }}</h5>
             <h5 class="text-center">{{ ce_symbol }}</h5>
             <div id="ce-table">{{ ce_table | safe }}</div>
         </div>
         <div class="col-md-6">
+            <h5 class="text-center" id="pe-title">{{ pe_symbol }}</h5>
             <h5 class="text-center">{{ pe_symbol }}</h5>
             <div id="pe-table">{{ pe_table | safe }}</div>
         </div>
@@ -48,6 +61,8 @@
             const data = await response.json();
             document.getElementById('ce-table').innerHTML = data.ce_table;
             document.getElementById('pe-table').innerHTML = data.pe_table;
+            document.getElementById('ce-title').textContent = data.ce_symbol || 'Call Option (CE)';
+            document.getElementById('pe-title').textContent = data.pe_symbol || 'Put Option (PE)';
         } catch (err) {
             document.getElementById('ce-table').innerHTML = "<p class='text-danger'>Error loading CE data</p>";
             document.getElementById('pe-table').innerHTML = "<p class='text-danger'>Error loading PE data</p>";

@@ -135,21 +135,26 @@ def start_bot(symb,auth_code):
     df["symbol"] = symb
     df['MA20'] = df['close'].rolling(window=20).mean()
     df['Above_MA20'] = df['close'] > df['MA20']
-    df = df[['symbol','timestamp','open','close','SUPERT_11_2.0','MA20','Above_MA20']].rename(columns={'SUPERT_11_2.0':'supertrend'})
+    df = df[['symbol','timestamp','open','close','SUPERT_11_2.0','MA20']].rename(columns={'SUPERT_11_2.0':'supertrend'})
     df_hist = df.sort_values(by='timestamp', ascending=False)
     # print(df_hist.head(20))
-    
+    df_hist['Above_MA20'] = df_hist['close'] > df_hist['MA20']
+    df_hist['next_Above_MA20'] = df_hist['Above_MA20'].shift(-1)
+    df_hist['ma20_crossover'] = (df_hist['Above_MA20'] == True) & (df_hist['next_Above_MA20'] == False)
+
+
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_hist a" \
 "               join df_ltp b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
+    df = df[['symbol','timestamp','open','close','supertrend','MA20','ltp','ma20_crossover']]
 
     fyers = fryersOrder(auth_code)
-    c = check_order_status(fyers)
+    check_order_status(fyers)
     
 
-    return print(c)
+    return print(df.head(20))
 
 
 

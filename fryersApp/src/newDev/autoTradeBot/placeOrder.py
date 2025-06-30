@@ -2,7 +2,7 @@ from fyers_api import fyersModel
 from datetime import date
 client_id = "15YI17TORX-100"
 # today = date.today().strftime("%Y-%m-%d")
-
+from datetime import datetime
 
 # Global state
 order_state = {
@@ -11,45 +11,50 @@ order_state = {
     "last_order_id": None
 }
 
-# def place_bo_order(fyers, symbol, qty, stop_loss, target):
-#     """
-#     Places a Bracket Order (BO) if no other active order and count < 3.
-#     """
-#     if order_state["active"]:
-#         print("Order already active. Skipping.")
-#         return {"status": "active", "message": "Order already running."}
+def place_bo_order(fyers, symbol, qty, stop_loss, target):
+    """
+    Places a Bracket Order (BO) if no other active order and count < 3.
+    """
+    now = datetime.now().time()
+    if now >= datetime.strptime("15:00", "%H:%M").time():
+        print("No more trades after 3:00 PM.")
+        return {"status": "closed", "message": "Market close. No trades allowed after 3:00 PM."}
+    
+    if order_state["active"]:
+        print("Order already active. Skipping.")
+        return {"status": "active", "message": "Order already running."}
 
-#     if order_state["count"] >= 3:
-#         print("Daily order limit reached.")
-#         return {"status": "limit", "message": "Max 3 orders reached."}
+    if order_state["count"] >= 3:
+        print("Daily order limit reached.")
+        return {"status": "limit", "message": "Max 3 orders reached."}
 
-#     payload = {
-#         "symbol": symbol,
-#         "qty": qty,
-#         "type": 2,               
-#         "side": 1,               
-#         "productType": "BO",
-#         "limitPrice": 0.0,       
-#         "stopLoss": stop_loss,
-#         "takeProfit": target,
-#         "validity": "DAY",
-#         "disclosedQty": 0,
-#         "offlineOrder": False,
-#         "stopPrice": 0.0,
-#         "orderTag": "SupertrendBot"
-#     }
+    payload = {
+        "symbol": symbol,
+        "qty": qty,
+        "type": 2,               
+        "side": 1,               
+        "productType": "BO",
+        "limitPrice": 0.0,       
+        "stopLoss": stop_loss,
+        "takeProfit": target,
+        "validity": "DAY",
+        "disclosedQty": 0,
+        "offlineOrder": False,
+        "stopPrice": 0.0,
+        "orderTag": "SupertrendBot"
+    }
 
-#     try:
+    try:
         
-#         response = fyers.place_order(payload)
-#         order_state["active"] = True
-#         order_state["count"] += 1
-#         order_state["last_order_id"] = response.get("id")
-#         print("BO Order Placed:", response)
-#         return response
-#     except Exception as e:
-#         print("Order Error:", e)
-#         return {"status": "error", "message": str(e)}
+        response = fyers.place_order(payload)
+        order_state["active"] = True
+        order_state["count"] += 1
+        order_state["last_order_id"] = response.get("id")
+        print("BO Order Placed:", response)
+        return response
+    except Exception as e:
+        print("Order Error:", e)
+        return {"status": "error", "message": str(e)}
 
 def check_order_status(fyers):
     """

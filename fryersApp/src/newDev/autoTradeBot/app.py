@@ -3,6 +3,13 @@ from fetchStrikeData import start_bot
 import pandas as pd
 from fetchStrikeData import getAuthCode
 from placeOrder import get_order_state
+from flask import request
+import threading
+from datetime import datetime
+import time
+import sys
+import os
+
 
 app = Flask(__name__)
 session = {}
@@ -32,7 +39,7 @@ def get_data():
         # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
         # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
 
-        return jsonify({'ce_table': ce_table, 'pe_table': pe_table})
+        return jsonify({'ce_table': ce_table, 'pe_table': pe_table,'ce_symbol': session.get('ce_symbol', 'Call Option (CE)'),'pe_symbol': session.get('pe_symbol', 'Put Option (PE)')})
 
     except Exception as e:
         return jsonify({'error': str(e)})
@@ -49,5 +56,20 @@ def result():
 def order_status():
     return jsonify(get_order_state())
 
+
+
+def auto_shutdown():
+    while True:
+        now = datetime.now().strftime("%H:%M")
+        if now == "15:15":
+            print("It's (3:15pm) end of session. Exiting Flask app.")
+            os._exit(0)  # Immediately stops the process
+        time.sleep(30)
+
+
+
+
 if __name__ == '__main__':
+
+    threading.Thread(target=auto_shutdown, daemon=True).start()
     app.run(debug=True)
