@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from fetchStrikeData import start_bot
+from fetchStrikeData import start_bot,fryersOrder
 import pandas as pd
 from fetchStrikeData import getAuthCode
 from placeOrder import get_order_state
@@ -10,7 +10,6 @@ import time
 import sys
 import os
 from orderStatusCurrent import get_current_order_details
-from fetchStrikeData import fryersOrder
 
 app = Flask(__name__)
 session = {}
@@ -75,7 +74,7 @@ def order_status_current():
         if not auth_token:
             return "No auth token found.", 400
 
-        fyers = fyersOrder(auth_token)
+        fyers = fryersOrder(auth_token)
         orders = get_current_order_details(fyers)
         return render_template("order_status_current.html", orders=orders)
     

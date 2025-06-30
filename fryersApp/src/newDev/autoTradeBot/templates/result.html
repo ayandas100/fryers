@@ -35,6 +35,12 @@
     <h3 class="text-center mb-4">📈 Live Option Data</h3>
     <p class="text-center text-muted" id="countdown">🔄 Refreshing in 30s</p>
 
+    <div class="text-center mt-4">
+        <a href="{{ url_for('order_status_current') }}" class="btn btn-info">
+            📋 View Current Order Status
+        </a>
+    </div>
+
     <div class="row">
         <div class="col-md-6">
             <h5 class="text-center" id="ce-title">{{ ce_symbol }}</h5>
@@ -46,11 +52,6 @@
             <h5 class="text-center">{{ pe_symbol }}</h5>
             <div id="pe-table">{{ pe_table | safe }}</div>
         </div>
-    </div>
-    <div class="text-center mt-4">
-        <a href="{{ url_for('order_status_current') }}" class="btn btn-info">
-            📋 View Current Order Status
-        </a>
     </div>
 
     <div class="text-center mt-4">
