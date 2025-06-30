@@ -33,13 +33,13 @@ def get_data():
         target = session['target']
         token = session['token']        
         
-        ce_table = start_bot(session['ce_symbol'], token)
-        pe_table = start_bot(session['pe_symbol'], token)
+        ce_table,ce_order_msg = start_bot(session['ce_symbol'], token)
+        pe_table,pe_order_msg = start_bot(session['pe_symbol'], token)
 
         # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
         # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
 
-        return jsonify({'ce_table': ce_table, 'pe_table': pe_table,'ce_symbol': session.get('ce_symbol', 'Call Option (CE)'),'pe_symbol': session.get('pe_symbol', 'Put Option (PE)')})
+        return jsonify({'ce_table': ce_table, 'pe_table': pe_table,'ce_symbol': session.get('ce_symbol', 'Call Option (CE)'),'pe_symbol': session.get('pe_symbol', 'Put Option (PE)'),'ce_order_msg': ce_order_msg,'pe_order_msg': pe_order_msg})
 
     except Exception as e:
         return jsonify({'error': str(e)})

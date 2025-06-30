@@ -12,7 +12,7 @@ pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_rows', None)
 import duckdb as db
 import pandas_ta as ta
-from autoTradeBot.placeOrder import check_order_status
+from autoTradeBot.placeOrder import check_order_status,place_bo_order
 
 
 client_id = "15YI17TORX-100"
@@ -156,7 +156,19 @@ def start_bot(symb,auth_code):
 
     fyers = fryersOrder(auth_code)
     check_order_status(fyers)
+
+    latest = df.iloc[0]
+    print(latest)
     
+    ltp = df['LTP'].iloc[0]
+    stop_loss = ltp - 10
+    target = ltp + 15
+    qty = 1
+    symbol = symb
+    print(ltp,stop_loss,target,symbol)
+    # place_bo_order(fyers, symbol, qty=1, stop_loss=stop_loss, target=target)
+    
+
 
     return print(df.head(20))
 

@@ -36,14 +36,13 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         "type": 2,               
         "side": 1,               
         "productType": "BO",
-        "limitPrice": 0.0,       
+        "limitPrice": 0,       
         "stopLoss": stop_loss,
         "takeProfit": target,
-        "validity": "DAY",
+        "validity": "IOC",
         "disclosedQty": 0,
         "offlineOrder": False,
-        "stopPrice": 0.0,
-        "orderTag": "SupertrendBot"
+        "stopPrice": 0
     }
 
     try:
@@ -52,8 +51,7 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         order_state["active"] = True
         order_state["count"] += 1
         order_state["last_order_id"] = response.get("id")
-        print("BO Order Placed:", response)
-        return response
+        return response.get("message")
     except Exception as e:
         print("Order Error:", e)
         return {"status": "error", "message": str(e)}

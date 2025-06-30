@@ -21,7 +21,7 @@ pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 import duckdb as db
 import pandas_ta as ta
-from placeOrder import check_order_status
+from placeOrder import check_order_status,place_bo_order,get_order_state
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
@@ -120,7 +120,7 @@ def fryers_chain(auth_code):
 
     data = {
         "symbol":"NSE:NIFTY50-INDEX",
-        "strikecount":3,
+        "strikecount":5,
         
     }
     response = fyers.optionchain(data=data)
@@ -185,14 +185,22 @@ def start_bot(symb,auth_code):
 
 
     fyers = fryersOrder(auth_code)
+    get_order_state()
     check_order_status(fyers)
 
-    ltp = df['LTP'].iloc[0]
-    stop_loss = ltp - 10
-    target = ltp + 15
-    qty = 1
-    symbol = symb
-    # place_bo_order(fyers, symbol, qty, stop_loss, target):
+    latest = df.iloc[0]
+    if latest['20 CXover'] and latest['Above ST']:
+        ltp = df['LTP'].iloc[0]
+        stop_loss = ltp - 10
+        target = ltp + 15
+        qty = 1
+        symbol = symb
+        order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
+    else:
+        order_response = {
+            "status": "skipped",
+            "message": "Conditions not met for placing order."
+        }
 
     
 
@@ -204,7 +212,7 @@ def start_bot(symb,auth_code):
                     .to_html(index=False, table_attributes='class="table table-bordered table-hover table-sm w-100"')
 
    
-    return styled_html
+    return styled_html,order_response
 
 
 
