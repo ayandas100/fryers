@@ -21,7 +21,7 @@ pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 import duckdb as db
 import pandas_ta as ta
-
+from placeOrder import check_order_status
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
@@ -122,7 +122,14 @@ def fryers_chain(auth_code):
     response = fyers.optionchain(data=data)
     return response
 
+## for ordering block
+def fryersOrder(auth_code):
+    access_token = gen_AcessTok(auth_code)
+    fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
+    return fyers
 
+
+# the logic block
 def start_bot(symb,auth_code):
     
     resp =  fryers_chain(auth_code)
@@ -163,6 +170,9 @@ def start_bot(symb,auth_code):
 "               on a.symbol=b.symbol")
     df = dbdf.df()
     df = df.head(20)
+
+    fyers = fryersOrder(auth_code)
+    check_order_status(fyers)
     
     styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2).to_html(index=False,table_attributes='class="table table-bordered table-hover table-sm"')
 

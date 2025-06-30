@@ -11,6 +11,7 @@ pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 import duckdb as db
 import pandas_ta as ta
+from autoTradeBot.placeOrder import check_order_status
 
 
 client_id = "15YI17TORX-100"
@@ -98,6 +99,12 @@ def fryers_chain(auth_code):
     return response
 
 
+def fryersOrder(auth_code):
+    access_token = gen_AcessTok(auth_code)
+    fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
+    return fyers
+
+
 def start_bot(symb,auth_code):
     
     resp =  fryers_chain(auth_code)
@@ -138,7 +145,11 @@ def start_bot(symb,auth_code):
 "               on a.symbol=b.symbol")
     df = dbdf.df()
 
-    return print(df.head(20))
+    fyers = fryersOrder(auth_code)
+    c = check_order_status(fyers)
+    
+
+    return print(c)
 
 
 

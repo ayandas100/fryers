@@ -31,8 +31,7 @@ data = {
 response = fyers.optionchain(data=data);
 # print(json.dumps(response))
 df = pd.DataFrame(response["data"]["optionsChain"])
-columns = [
-    "symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
+columns = ["symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
 
 df = df[columns]
 print(df.head(20)) 
