@@ -1,13 +1,3 @@
-'''
-Created on 29-Jun-2025
-
-@author: User
-'''
-'''
-Created on 13-Apr-2024
-
-@author: User
-'''
 from datetime import date
 from fyers_api import fyersModel
 from fyers_api import accessToken
@@ -24,30 +14,13 @@ import pandas_ta as ta
 
 
 client_id = "15YI17TORX-100"
+# secret_key = "2HJ9AD57A5"
+# redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
+# response_type = "code"  
+# state = "sample_state"
+# grant_type = "authorization_code"  
 today = date.today().strftime("%Y-%m-%d")
-
-def getAuthCode():
-    client_id = "15YI17TORX-100"
-    secret_key = "2HJ9AD57A5"
-    redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
-    response_type = "code"  
-    state = "sample_state"
-    grant_type = "authorization_code"  
-
-    # Create a session model with the provided credentials
-    session = fyersModel.SessionModel(
-        client_id=client_id,
-        secret_key=secret_key,
-        redirect_uri=redirect_uri,
-        response_type=response_type,
-        grant_type=grant_type
-        
-    )
-
-    # Generate the auth code using the session model
-    auth_codeURL = session.generate_authcode()
-    return auth_codeURL
-
+    
 access_token = None
 def gen_AcessTok(auth_code):
     global access_token
@@ -78,6 +51,8 @@ def gen_AcessTok(auth_code):
         # Generate the access token using the authorization code
         access_token = session.generate_token()["access_token"]
     return access_token
+
+# symb_optionchain="NSE:NIFTY50-INDEX"
 
 
 def highlight_supertrend(row):
@@ -162,14 +137,12 @@ def start_bot(symb,auth_code):
 "               join df_ltp b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
-    df = df.head(20)
-    
-    styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2).to_html(index=False,table_attributes='class="table table-bordered table-hover table-sm"')
 
-
-    return styled_html
+    return print(df.head(20))
 
 
 
-
-
+if __name__ == '__main__':
+    symb = "NSE:NIFTY2570325600PE"
+    auth_code = input("Enter auth code: ")
+    start_bot(symb,auth_code)

@@ -9,6 +9,7 @@ from fyers_api import accessToken
 import os
 from fyers_apiv3 import fyersModel
 import datetime as dt
+import pandas as pd
 
 client_id = "15YI17TORX-100"
 secret_key = "2HJ9AD57A5"
@@ -22,8 +23,16 @@ access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiw
 fyers = fyersModel.FyersModel(
     client_id=client_id, token=access_token, log_path="")
 #NSE:NIFTY50-INDEX
-data = {"symbol": "NSE:TCS-EQ", "resolution": "5", "date_format": "1",
-         "range_from": "2023-01-18", "range_to": "2023-01-18", "cont_flag": "1"}
+data = {
+    "symbol":"NSE:NIFTY2570325600CE",
+    "strikecount":3,
+    
+}
+response = fyers.optionchain(data=data);
+# print(json.dumps(response))
+df = pd.DataFrame(response["data"]["optionsChain"])
+columns = [
+    "symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
 
-print(fyers.optionchain(data))
- 
+df = df[columns]
+print(df.head(20)) 

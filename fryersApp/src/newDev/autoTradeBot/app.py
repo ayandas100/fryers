@@ -1,18 +1,20 @@
 from flask import Flask, render_template, request, jsonify
 from fetchStrikeData import start_bot
 import pandas as pd
+from fetchStrikeData import getAuthCode
 
 app = Flask(__name__)
 session = {}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    auth_url = getAuthCode()
     if request.method == 'POST':
         session['token'] = request.form['access_token']
         session['ce_symbol'] = request.form['ce_symbol']
         session['pe_symbol'] = request.form['pe_symbol']
         return render_template('result.html')  # triggers auto-refresh
-    return render_template('index.html')
+    return render_template('index.html',auth_url=auth_url)
 
 @app.route('/data')
 def get_data():

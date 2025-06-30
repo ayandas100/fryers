@@ -16,8 +16,12 @@
                     </div>
                     <div class="card-body">
                         <form method="POST">
+                            <div class="alert alert-info text-center mt-3">
+                                <strong>GET AUTH CODE:</strong>
+                                <a href="{{ auth_url }}" target="_blank">{{ auth_url }}</a>
+                            </div>
                             <div class="mb-3">
-                                <label for="access_token" class="form-label">Access Token</label>
+                                <label for="access_token" class="form-label">Auth Code</label>
                                 <input type="text" class="form-control" id="access_token" name="access_token" required>
                             </div>
                             <div class="mb-3">

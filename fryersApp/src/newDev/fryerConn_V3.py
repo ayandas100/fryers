@@ -7,8 +7,8 @@ Created on 13-Apr-2024
 from fyers_apiv3 import fyersModel
 
 # Replace these values with your actual API credentials
-client_id = "N3VPS274OH-100"
-secret_key = "MONNT2QWHX"
+client_id = "15YI17TORX-100"
+secret_key = "2HJ9AD57A5"
 redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
 response_type = "code"  
 state = "sample_state"
