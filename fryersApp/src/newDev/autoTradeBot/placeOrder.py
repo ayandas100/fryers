@@ -15,8 +15,10 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
     """
     Places a Bracket Order (BO) if no other active order and count < 3.
     """
+    start_time = datetime.strptime("09:20", "%H:%M").time()
+    end_time = datetime.strptime("15:00", "%H:%M").time()
     now = datetime.now().time()
-    if now >= datetime.strptime("15:00", "%H:%M").time():
+    if (start_time <= now < end_time):
         print("No more trades after 3:00 PM.")
         return {"status": "closed", "message": "Market close. No trades allowed after 3:00 PM."}
     

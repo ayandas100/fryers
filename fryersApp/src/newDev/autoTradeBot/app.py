@@ -9,7 +9,8 @@ from datetime import datetime
 import time
 import sys
 import os
-
+from orderStatusCurrent import get_current_order_details
+from fetchStrikeData import fryersOrder
 
 app = Flask(__name__)
 session = {}
@@ -67,6 +68,19 @@ def auto_shutdown():
         time.sleep(30)
 
 
+@app.route('/order-status-current')
+def order_status_current():
+    try:
+        auth_token = session.get('token')
+        if not auth_token:
+            return "No auth token found.", 400
+
+        fyers = fyersOrder(auth_token)
+        orders = get_current_order_details(fyers)
+        return render_template("order_status_current.html", orders=orders)
+    
+    except Exception as e:
+        return f"Error: {e}", 500
 
 
 if __name__ == '__main__':

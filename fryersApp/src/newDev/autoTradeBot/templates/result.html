@@ -29,7 +29,8 @@
     <a href="/order-status" target="_blank" class="btn btn-outline-info">
         🧾 View Order Status for Today
     </a>
-</div>    
+</div>
+
 <div class="container py-5">
     <h3 class="text-center mb-4">📈 Live Option Data</h3>
     <p class="text-center text-muted" id="countdown">🔄 Refreshing in 30s</p>
@@ -45,6 +46,11 @@
             <h5 class="text-center">{{ pe_symbol }}</h5>
             <div id="pe-table">{{ pe_table | safe }}</div>
         </div>
+    </div>
+    <div class="text-center mt-4">
+        <a href="{{ url_for('order_status_current') }}" class="btn btn-info">
+            📋 View Current Order Status
+        </a>
     </div>
 
     <div class="text-center mt-4">

@@ -23,10 +23,12 @@ import duckdb as db
 import pandas_ta as ta
 from placeOrder import check_order_status
 from bs4 import BeautifulSoup
-
+from datetime import datetime, timedelta
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
+yesterday = datetime.today() - timedelta(days=1)
+yesterday = yesterday.strftime('%Y-%m-%d')
 
 def getAuthCode():
     client_id = "15YI17TORX-100"
@@ -107,7 +109,7 @@ def fryers_hist(symb,auth_code):
     fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
 
     data = {"symbol": f"{symb}", "resolution": "5", "date_format": "1",
-            "range_from": "2025-06-26", "range_to": today, "cont_flag": "1"}
+            "range_from": yesterday, "range_to": today, "cont_flag": "1"}
 
     candle_data = fyers.history(data)
     return candle_data
@@ -158,30 +160,40 @@ def start_bot(symb,auth_code):
 
     df_candle = df_candle.sort_values(by="timestamp").reset_index(drop=True)
     df_candle.ta.supertrend(length=11, multiplier=2.0, append=True)
-    df = df_candle
-    df["symbol"] = symb
-    df['MA20'] = df['close'].rolling(window=20).mean()
-    # df['Above_MA20'] = df['close'] > df['MA20']
-    df = df[['symbol','timestamp','open','close','SUPERT_11_2.0','MA20']].rename(columns={'SUPERT_11_2.0':'supertrend'})
-    df_hist = df.sort_values(by='timestamp', ascending=False)
-    # print(df_hist.head(20))
-    df_hist['Above_MA20'] = df_hist['close'] > df_hist['MA20']
-    df_hist['next_Above_MA20'] = df_hist['Above_MA20'].shift(-1)
-    df_hist['20 CXover'] = (df_hist['Above_MA20'] == True) & (df_hist['next_Above_MA20'] == False)
-    df_hist['Above ST'] = df['close'] > df['supertrend']
+    df_candle["symbol"] = symb
+   
+    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0']].rename(columns={'SUPERT_11_2.0':'supertrend'})
+    df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
+
+    df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
+    df_candle.loc[:,'Above_MA20'] = df_candle['close'] > df_candle['MA20']
+    df_candle.loc[:, 'prev_Above_MA20'] = df_candle['Above_MA20'].shift(1)
+    df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
+    df_candle.loc[:,'Above ST'] = df_candle['close'] > df_candle['supertrend']
+
 
     dbdf = db.query("select a.*,b.ltp " \
-"               from df_hist a" \
+"               from df_candle a" \
 "               join df_ltp b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
-    df = df[['timestamp','open','close','ltp','supertrend','20 CXover','Above ST']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'STrend'})
-    df = df.reset_index(drop=True)
-    df.index.name = None
+    df = df[['timestamp','open','close','ltp','MA20','supertrend','20 CXover','Above ST']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'STrend','MA20':'MA'})
+    # df = df.reset_index(drop=True)
+    # df.index.name = None
+    df = df.sort_values(by='Time', ascending=False)
     df = df.head(20)
+
 
     fyers = fryersOrder(auth_code)
     check_order_status(fyers)
+
+    ltp = df['LTP'].iloc[0]
+    stop_loss = ltp - 10
+    target = ltp + 15
+    qty = 1
+    symbol = symb
+    # place_bo_order(fyers, symbol, qty, stop_loss, target):
+
     
 
     styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2)\
