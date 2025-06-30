@@ -1,0 +1,3 @@
+{"level":"DEBUG","location":"[get_call:140] fyersModel","message":{"Status Code":403,"API":"/history"},"timestamp":"2025-06-30 12:10:11,218+0530","service":"FyersAPIRequest"}
+{"level":"DEBUG","location":"[get_call:140] fyersModel","message":{"Status Code":403,"API":"/history"},"timestamp":"2025-06-30 12:10:42,973+0530","service":"FyersAPIRequest"}
+{"level":"DEBUG","location":"[get_call:140] fyersModel","message":{"Status Code":403,"API":"/history"},"timestamp":"2025-06-30 12:11:13,988+0530","service":"FyersAPIRequest"}

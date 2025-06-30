@@ -35,15 +35,23 @@ today = date.today().strftime("%Y-%m-%d")
 
 
 def highlight_supertrend(row):
-    try:
-        st = row['SUPERT_10_3.0']
-        price = row['close']
-        if pd.notna(st) and pd.notna(price) and st < price:
-            return ['background-color: lightgreen' if col == 'SUPERT_10_3.0' else '' for col in row.index]
-        else:
-            return ['' for _ in row]
-    except:
-        return ['' for _ in row]
+    supertrend = row['supertrend']
+    close = row['close']
+    
+    if pd.isna(supertrend) or pd.isna(close):
+        return [''] * len(row)
+
+    styles = [''] * len(row)
+    
+    # Get column index of 'supertrend'
+    st_index = row.index.get_loc('supertrend')
+
+    if supertrend < close:
+        styles[st_index] = 'background-color: lightgreen'
+    elif supertrend > close:
+        styles[st_index] = 'background-color: lightcoral'
+
+    return styles
 
 
 def start_bot(symb,token):
@@ -72,7 +80,7 @@ def start_bot(symb,token):
 
     ### read the data for selected strike price
     #NSE:NIFTY2570325600CE 
-    data = {"symbol": f"{symb}", "resolution": "15", "date_format": "1",
+    data = {"symbol": f"{symb}", "resolution": "5", "date_format": "1",
             "range_from": "2025-06-26", "range_to": "2025-06-27", "cont_flag": "1"}
 
     candle_data = fyers.history(data)
@@ -87,12 +95,14 @@ def start_bot(symb,token):
     )
 
     df_candle.ta.supertrend(length=11, multiplier=2.0, append=True)
-    df = df_candle.sort_values(by='timestamp', ascending=False)
+    df = df_candle
     df['MA20'] = df['close'].rolling(window=20).mean()
     df['Above_MA20'] = df['close'] > df['MA20']
     df = df[['timestamp','open','close','SUPERT_11_2.0','MA20','Above_MA20']].rename(columns={'SUPERT_11_2.0':'supertrend'})
-
-    styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2).to_html()
+    df = df.sort_values(by='timestamp', ascending=False)
+    df = df.head(20)
+    df.reset_index(drop=True, inplace=True)
+    styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2).to_html(index=False,table_attributes='class="table table-bordered table-hover table-sm"')
 
     # print(df_candle.head(20))
 

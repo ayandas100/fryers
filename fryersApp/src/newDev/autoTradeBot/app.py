@@ -24,8 +24,15 @@ def get_data():
         # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
 
         return jsonify({'ce_table': ce_table, 'pe_table': pe_table})
+
     except Exception as e:
         return jsonify({'error': str(e)})
+
+@app.route('/result')
+def result():
+    ce_symbol = session.get('ce_symbol', 'Call Option (CE)')
+    pe_symbol = session.get('pe_symbol', 'Put Option (PE)')
+    return render_template('result.html', ce_symbol=ce_symbol, pe_symbol=pe_symbol)
 
 
 if __name__ == '__main__':

@@ -35,4 +35,5 @@ session.set_token(auth_code)
 response = session.generate_token()["access_token"]
 
 # Print the response, which should contain the access token and other details
+print("Acess Token:")
 print(response)

@@ -3,20 +3,29 @@
 <head>
     <title>Live CE & PE Data</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        table {
+            text-align: center;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+    </style>
 </head>
 <body class="bg-light">
 <div class="container py-5">
     <h3 class="text-center mb-4">📈 Live Option Data</h3>
-    <p class="text-center text-muted" id="countdown">🔄 Refreshing in 15s</p>
+    <p class="text-center text-muted" id="countdown">🔄 Refreshing in 30s</p>
 
     <div class="row">
         <div class="col-md-6">
-            <h5 class="text-center">Call Option (CE)</h5>
-            <div id="ce-table">⏳ Loading...</div>
+            <h5 class="text-center">{{ ce_symbol }}</h5>
+            <div id="ce-table">{{ ce_table | safe }}</div>
         </div>
         <div class="col-md-6">
-            <h5 class="text-center">Put Option (PE)</h5>
-            <div id="pe-table">⏳ Loading...</div>
+            <h5 class="text-center">{{ pe_symbol }}</h5>
+            <div id="pe-table">{{ pe_table | safe }}</div>
         </div>
     </div>
 
@@ -26,7 +35,7 @@
 </div>
 
 <script>
-    let seconds = 15;
+    let seconds = 30;
 
     async function fetchData() {
         try {
@@ -45,7 +54,7 @@
         seconds--;
         if (seconds < 0) {
             fetchData();
-            seconds = 15;
+            seconds = 30;
         }
     }
 
