@@ -26,7 +26,7 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         print("Order already active. Skipping.")
         return {"status": "active", "message": "Order already running."}
 
-    if order_state["count"] >= 3:
+    if order_state["count"] >= 2:
         print("Daily order limit reached.")
         return {"status": "limit", "message": "Max 3 orders reached."}
 
@@ -55,29 +55,26 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         return {"status": "error", "message": str(e)}
 
 def check_order_status(fyers):
-    """
-    Checks the status of the last order. If completed or exited, resets order_state.
-    """
-    try:
-        if not order_state["last_order_id"]:
-            return {"status": "idle", "message": "No order placed yet."}
-
+    if not order_state["last_order_id"]:
+        return {"status": "idle", "message": "No order placed yet."}
+    
+    orders = fyers.orderbook({})
+    if "orderBook" in orders:
         
-        orders = fyers.get_orders()
-        for order in orders["orders"]:
-            if order["id"] == order_state["last_order_id"]:
-                if order["status"] in ["TRADE", "CANCELLED", "REJECTED"]:
-                    order_state["active"] = False
-                    
-                    return {"status": "done", "message": f"Order {order['status']}"}
-                else:
-                    return {"status": "pending", "message": f"Order still active: {order['status']}"}
+        sorted_orders = sorted(
+                    orders["orderBook"],
+                    key=lambda x: x.get("orderDateTime", ""),
+                    reverse=True
+                )
+        for order in sorted_orders:
+            if order.get("id") == order_state["last_order_id"]:
+                if order.get("status") in [1,2,5]:
+                    order_state["active"] = True
+                  
 
-        return {"status": "not_found", "message": "Order ID not found in orderbook."}
+        return {"status": "not_found", "message": "Order not found in orderbook"}
 
-    except Exception as e:
-        print("⚠️ Error checking order status:", e)
-        return {"status": "error", "message": str(e)}
+
 
 def get_order_state():
     """Returns the current order state."""

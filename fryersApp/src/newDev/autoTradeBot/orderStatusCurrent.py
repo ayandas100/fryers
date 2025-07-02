@@ -1,5 +1,8 @@
-from fyers_api import fyersModel
+from fyers_apiv3 import fyersModel
 import json
+
+
+
 def get_current_order_details(fyers):
     try:
         orders = fyers.orderbook({})
@@ -20,7 +23,7 @@ def get_current_order_details(fyers):
                 status_code = order.get("status")
                 symbol = order.get("symbol", "UNKNOWN")
                 qty = order.get("qty", 0)
-                order_id = order.get("id") or order.get("fy_id") or "UNKNOWN"
+                order_id = order.get("id")
 
                 # ✅ Get P&L from positions if available
                 pnl = 0
@@ -30,7 +33,7 @@ def get_current_order_details(fyers):
                         break
 
                 # ✅ Check for active order (first match, most recent)
-                if status_code in [1, 2, 7, 8]:
+                if status_code in [2, 3, 4, 6]:
                     latest_active_order = {
                         "order_id": order_id,
                         "symbol": symbol,
@@ -40,21 +43,21 @@ def get_current_order_details(fyers):
                     }
                     break  # only the most recent active one
 
-                # ✅ Fallback: track most recent closed/filled order
-                elif not latest_closed_order and status_code in [3, 5, 6]:  # Cancelled, Completed, Filled
-                    latest_closed_order = {
-                        "order_id": order_id,
-                        "symbol": symbol,
-                        "qty": qty,
-                        "status": status_code,
-                        "pnl": round(pnl, 2)
-                    }
+                # # ✅ Fallback: track most recent closed/filled order
+                # elif not latest_closed_order and status_code in [1, 2, 5]:  # Cancelled, Completed, Filled
+                #     latest_closed_order = {
+                #         "order_id": order_id,
+                #         "symbol": symbol,
+                #         "qty": qty,
+                #         "status": status_code,
+                #         "pnl": round(pnl, 2)
+                #     }
 
         # ✅ Final result selection
         if latest_active_order:
             result = [latest_active_order]
-        elif latest_closed_order:
-            result = [latest_closed_order]
+        # elif latest_closed_order:
+        #     result = [latest_closed_order]
         else:
             result = [{"message": "No orders found"}]
 

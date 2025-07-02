@@ -30,6 +30,7 @@ today = date.today().strftime("%Y-%m-%d")
 yesterday = datetime.today() - timedelta(days=1)
 yesterday = yesterday.strftime('%Y-%m-%d')
 
+
 def getAuthCode():
     client_id = "15YI17TORX-100"
     secret_key = "2HJ9AD57A5"
@@ -111,7 +112,7 @@ def fryers_hist(symb,auth_code):
     access_token = gen_AcessTok(auth_code)
     fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
 
-    data = {"symbol": f"{symb}", "resolution": "5", "date_format": "1",
+    data = {"symbol":f"{symb}", "resolution": "15", "date_format": "1",
             "range_from": yesterday, "range_to": today, "cont_flag": "1"}
 
     candle_data = fyers.history(data)
@@ -123,7 +124,7 @@ def fryers_chain(auth_code):
 
     data = {
         "symbol":"NSE:NIFTY50-INDEX",
-        "strikecount":5,
+        "strikecount":30,
         
     }
     response = fyers.optionchain(data=data)
@@ -136,6 +137,7 @@ def fryersOrder(auth_code):
     return fyers
 
 
+
 # the logic block
 def start_bot(symb,auth_code):
     
@@ -144,7 +146,7 @@ def start_bot(symb,auth_code):
     # print(resp)
     df_op = pd.DataFrame(resp["data"]["optionsChain"])
     columns = ["symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
-    df_ltp = df_op[columns]
+    df_op = df_op[columns]
     
     ### read the data for selected strike price
     #NSE:NIFTY2570325600CE 
@@ -166,7 +168,7 @@ def start_bot(symb,auth_code):
     df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
     df_candle["symbol"] = symb
    
-    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
+    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
     df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
 
     df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
@@ -175,14 +177,19 @@ def start_bot(symb,auth_code):
     df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
     df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
     df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
-
+    #ATR calculations
+    df_candle['H-L'] = df_candle['high'] - df_candle['low']
+    df_candle['H-PC'] = abs(df_candle['high'] - df_candle['close'].shift(1))
+    df_candle['L-PC'] = abs(df_candle['low'] - df_candle['close'].shift(1))
+    df_candle['TR'] = df_candle[['H-L', 'H-PC', 'L-PC']].max(axis=1)
+    df_candle['ATR'] = df_candle['TR'].rolling(window=14).mean()
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
-"               join df_ltp b" \
+"               join df_op b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
-    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','Above ST11','Above ST10']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10'})
+    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','Above ST11','Above ST10','ATR']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -195,10 +202,10 @@ def start_bot(symb,auth_code):
 
     latest = df.iloc[0]
     previous = df.iloc[1]
-    if latest['20 CXover'] and latest['Above ST11'] and latest['Above ST10']:
+    if (previous['20 CXover'] or latest['20 CXover']) and latest['Above ST11'] and latest['Above ST10'] and latest['ATR'] >= 10:
         ltp = df['LTP'].iloc[0]
-        stop_loss = 5
-        target = 10
+        stop_loss = 8
+        target = 15
         qty = 1
         symbol = symb
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)

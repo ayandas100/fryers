@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session as flask_session
 from fetchStrikeData import start_bot,fryersOrder
 import pandas as pd
 from fetchStrikeData import getAuthCode
@@ -11,6 +11,7 @@ import sys
 import os
 from orderStatusCurrent import get_current_order_details
 import json
+from symbolLoad import loadSymbol
 
 app = Flask(__name__)
 session = {}
@@ -34,23 +35,33 @@ def get_data():
         target = session['target']
         global token
         token = session['token']        
-        
-        ce_table,ce_order_msg = start_bot(session['ce_symbol'], token)
-        pe_table,pe_order_msg = start_bot(session['pe_symbol'], token)
+        ce, pe = loadSymbol(token, use_flask_session=True)
+        # print("📦 Symbols:", ce, pe)
+        ce_table,ce_order_msg = start_bot(ce, token)
+        pe_table,pe_order_msg = start_bot(pe, token)
 
         # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
         # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
 
-        return jsonify({'ce_table': ce_table, 'pe_table': pe_table,'ce_symbol': session.get('ce_symbol', 'Call Option (CE)'),'pe_symbol': session.get('pe_symbol', 'Put Option (PE)'),'ce_order_msg': ce_order_msg,'pe_order_msg': pe_order_msg})
+        return jsonify({
+            'ce_table': ce_table,
+            'pe_table': pe_table,
+            'ce_symbol': ce,
+            'pe_symbol': pe,
+            'ce_order_msg': ce_order_msg,
+            'pe_order_msg': pe_order_msg
+        })
 
     except Exception as e:
         return jsonify({'error': str(e)})
 
 @app.route('/result')
 def result():
-    ce_symbol = session.get('ce_symbol', 'Call Option (CE)')
-    pe_symbol = session.get('pe_symbol', 'Put Option (PE)')
-    return render_template('result.html', ce_symbol=ce_symbol, pe_symbol=pe_symbol)
+    return render_template(
+        'result.html',
+        ce_symbol=flask_session.get('ce_symbol', 'Call Option (CE)'),
+        pe_symbol=flask_session.get('pe_symbol', 'Put Option (PE)')
+    )
 
 
 
