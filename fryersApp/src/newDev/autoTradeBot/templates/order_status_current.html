@@ -11,7 +11,7 @@
         <p id="refresh-timer" class="text-muted">🔄 Refreshing in 30s</p>
     </div>
     <div class="container py-5">
-        <h3 class="text-center mb-4">📋 Current Order Status</h3>
+        <h3 class="text-center mb-4">📋 Current/Latest Order Status</h3>
 
         {% if orders and orders|length > 0 %}
             <table class="table table-bordered table-hover table-sm">
@@ -20,7 +20,8 @@
                         <th>Symbol</th>
                         <th>Quantity</th>
                         <th>Status</th>
-                        <th>P&L</th>
+                        <th>Current/Last Trade P&L</th>
+                        <th>Total P&L</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,8 +29,15 @@
                     <tr>
                         <td>{{ order.symbol }}</td>
                         <td>{{ order.qty }}</td>
-                        <td>{{ order.status }}</td>
+                       <td>
+                        {% if order.status == 1 %}
+                            🟢 Running
+                        {% else %}
+                            ✅ Completed
+                        {% endif %}
+                        </td>
                         <td>{{ order.pnl }}</td>
+                        <td>{{ order.total_pnl_today }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -1,4 +1,4 @@
-from fyers_api import fyersModel
+from fyers_apiv3 import fyersModel
 from datetime import date
 client_id = "15YI17TORX-100"
 # today = date.today().strftime("%Y-%m-%d")
@@ -36,13 +36,11 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         "type": 2,               
         "side": 1,               
         "productType": "BO",
-        "limitPrice": 0,       
         "stopLoss": stop_loss,
         "takeProfit": target,
-        "validity": "IOC",
+        "validity": "DAY",
         "disclosedQty": 0,
-        "offlineOrder": False,
-        "stopPrice": 0
+        "offlineOrder": False
     }
 
     try:

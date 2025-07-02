@@ -132,40 +132,42 @@ def start_bot(symb,auth_code):
 
     df_candle = df_candle.sort_values(by="timestamp").reset_index(drop=True)
     df_candle.ta.supertrend(length=11, multiplier=2.0, append=True)
+    df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
     df_candle["symbol"] = symb
    
-    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0']].rename(columns={'SUPERT_11_2.0':'supertrend'})
+    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
     df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
 
     df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
     df_candle.loc[:,'Above_MA20'] = df_candle['close'] > df_candle['MA20']
     df_candle.loc[:, 'prev_Above_MA20'] = df_candle['Above_MA20'].shift(1)
     df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
-    df_candle.loc[:,'Above ST'] = df_candle['close'] > df_candle['supertrend']
+    df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
+    df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
 "               join df_ltp b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
-    df = df[['timestamp','open','close','ltp','supertrend','20 CXover','Above ST']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'STrend'})
+    df = df[['timestamp','ltp','supertrend10','supertrend','20 CXover','Above ST11','Above ST10']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST 11','supertrend10':'ST 10'})
 
     df = df.sort_values(by='Time', ascending=False)
-    df = df.head(20)
-
-
-    fyers = fryersOrder(auth_code)
-    check_order_status(fyers)
-
-    latest = df.iloc[0]
-    print(latest)
     
-    ltp = df['LTP'].iloc[0]
-    stop_loss = ltp - 10
-    target = ltp + 15
-    qty = 1
-    symbol = symb
-    print(ltp,stop_loss,target,symbol)
+
+
+    # fyers = fryersOrder(auth_code)
+    # check_order_status(fyers)
+
+    # latest = df.iloc[0]
+    # print(latest)
+    
+    # ltp = df['LTP'].iloc[0]
+    # stop_loss = ltp - 10
+    # target = ltp + 15
+    # qty = 1
+    # symbol = symb
+    # print(ltp,stop_loss,target,symbol)
     # place_bo_order(fyers, symbol, qty=1, stop_loss=stop_loss, target=target)
     
 

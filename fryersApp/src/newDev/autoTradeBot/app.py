@@ -10,6 +10,7 @@ import time
 import sys
 import os
 from orderStatusCurrent import get_current_order_details
+import json
 
 app = Flask(__name__)
 session = {}
@@ -31,6 +32,7 @@ def get_data():
     try:
         stop_loss = session['stop_loss']
         target = session['target']
+        global token
         token = session['token']        
         
         ce_table,ce_order_msg = start_bot(session['ce_symbol'], token)
@@ -70,12 +72,9 @@ def auto_shutdown():
 @app.route('/order-status-current')
 def order_status_current():
     try:
-        auth_token = session.get('token')
-        if not auth_token:
-            return "No auth token found.", 400
-
-        fyers = fryersOrder(auth_token)
-        orders = get_current_order_details(fyers)
+        fyers = fryersOrder(token)
+        orders_json = get_current_order_details(fyers)
+        orders = json.loads(orders_json)
         return render_template("order_status_current.html", orders=orders)
     
     except Exception as e:

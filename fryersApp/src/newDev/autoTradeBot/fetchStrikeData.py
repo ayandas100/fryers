@@ -9,8 +9,8 @@ Created on 13-Apr-2024
 @author: User
 '''
 from datetime import date
-from fyers_api import fyersModel
-from fyers_api import accessToken
+# from fyers_api import fyersModel
+# from fyers_api import accessToken
 import os
 from fyers_apiv3 import fyersModel
 import datetime as dt
@@ -85,24 +85,27 @@ def gen_AcessTok(auth_code):
 
 
 def highlight_supertrend(row):
-    supertrend = row['STrend']
-    close = row['close']
+    st_11 = row.get('ST_11')
+    st_10 = row.get('ST_10')
+    close = row.get('close')
     
-    if pd.isna(supertrend) or pd.isna(close):
-        return [''] * len(row)
-
     styles = [''] * len(row)
     
-    # Get column index of 'supertrend'
-    st_index = row.index.get_loc('STrend')
+    if pd.notna(st_11) and pd.notna(close):
+        st_11_index = row.index.get_loc('ST_11')
+        if st_11 < close:
+            styles[st_11_index] = 'background-color: lightgreen'
+        elif st_11 > close:
+            styles[st_11_index] = 'background-color: lightcoral'
 
-    if supertrend < close:
-        styles[st_index] = 'background-color: lightgreen'
-    elif supertrend > close:
-        styles[st_index] = 'background-color: lightcoral'
+    if pd.notna(st_10) and pd.notna(close):
+        st_10_index = row.index.get_loc('ST_10')
+        if st_10 < close:
+            styles[st_10_index] = 'background-color: lightgreen'
+        elif st_10 > close:
+            styles[st_10_index] = 'background-color: lightcoral'
 
     return styles
-
 
 def fryers_hist(symb,auth_code):
     access_token = gen_AcessTok(auth_code)
@@ -160,16 +163,18 @@ def start_bot(symb,auth_code):
 
     df_candle = df_candle.sort_values(by="timestamp").reset_index(drop=True)
     df_candle.ta.supertrend(length=11, multiplier=2.0, append=True)
+    df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
     df_candle["symbol"] = symb
    
-    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0']].rename(columns={'SUPERT_11_2.0':'supertrend'})
+    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
     df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
 
     df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
     df_candle.loc[:,'Above_MA20'] = df_candle['close'] > df_candle['MA20']
     df_candle.loc[:, 'prev_Above_MA20'] = df_candle['Above_MA20'].shift(1)
     df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
-    df_candle.loc[:,'Above ST'] = df_candle['close'] > df_candle['supertrend']
+    df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
+    df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
 
 
     dbdf = db.query("select a.*,b.ltp " \
@@ -177,7 +182,7 @@ def start_bot(symb,auth_code):
 "               join df_ltp b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
-    df = df[['timestamp','open','close','ltp','MA20','supertrend','20 CXover','Above ST']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'STrend','MA20':'MA'})
+    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','Above ST11','Above ST10']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -189,10 +194,11 @@ def start_bot(symb,auth_code):
     check_order_status(fyers)
 
     latest = df.iloc[0]
-    if latest['20 CXover'] and latest['Above ST']:
+    previous = df.iloc[1]
+    if latest['20 CXover'] and latest['Above ST11'] and latest['Above ST10']:
         ltp = df['LTP'].iloc[0]
-        stop_loss = ltp - 10
-        target = ltp + 15
+        stop_loss = 5
+        target = 10
         qty = 1
         symbol = symb
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
