@@ -92,8 +92,10 @@ if __name__ == '__main__':
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
     symbol = "NSE:NIFTY2571025450PE"     # Change to your desired symbol
 
-    qty = 75                             # 1 lot (75 quantity)
-    target = 10                  # 10-point target
+    qty = 75
+    atr = 13
+    target = 10 if 8.50 <= atr <= 12 else 15 if atr > 12 else 8                             # 1 lot (75 quantity)
+    # target = 10                  # 10-point target
     stop_loss = 3                 # 7-point stoploss
 
     orSt = place_bo_order(fyers, symbol, qty, stop_loss, target)
