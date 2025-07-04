@@ -28,7 +28,7 @@
 
     <div class="container py-5">
         <h3 class="text-center mb-4">📈 Live Option Data</h3>
-        <p class="text-center text-muted" id="countdown">🔄 Refreshing in 30s</p>
+        <p class="text-center text-muted" id="countdown">🔄 Refreshing in 15s</p>
 
         <div class="text-center mt-4">
             <a href="{{ url_for('order_status_current') }}" class="btn btn-info" target="_blank">
@@ -61,7 +61,7 @@
     </div>
 
     <script>
-    let seconds = 30;
+    let seconds = 15;
 
     async function fetchData() {
         console.log("🚀 fetchData() called");
@@ -102,7 +102,7 @@
         seconds--;
         if (seconds < 0) {
             fetchData();
-            seconds = 30;
+            seconds = 15;
         }
     }
 

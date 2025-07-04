@@ -4,3 +4,4 @@
 {"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/options-chain-v3","Error":{"message":"Please provide valid token","code":-15,"s":"error"}},"timestamp":"2025-06-30 17:29:38,317+0530","service":"FyersAPI"}
 {"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/options-chain-v3","Error":{"message":"Please provide valid token","code":-15,"s":"error"}},"timestamp":"2025-06-30 17:32:57,986+0530","service":"FyersAPI"}
 {"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/options-chain-v3","Error":{"message":"Please provide valid token","code":-15,"s":"error"}},"timestamp":"2025-06-30 17:37:39,022+0530","service":"FyersAPI"}
+{"level":"ERROR","location":"[post_call:89] fyersModel","message":{"API":"/orders/sync","Error":{"code":-50,"message":"1 not a multiple of minimum lot size 75","s":"error"}},"timestamp":"2025-07-03 09:15:24,342+0530","service":"FyersAPI"}

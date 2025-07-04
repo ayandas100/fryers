@@ -18,17 +18,17 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
     start_time = datetime.strptime("09:20", "%H:%M").time()
     end_time = datetime.strptime("15:00", "%H:%M").time()
     now = datetime.now().time()
-    if (start_time <= now < end_time):
-        print("No more trades after 3:00 PM.")
-        return {"status": "closed", "message": "Market close. No trades allowed after 3:00 PM."}
+    if not (start_time <= now < end_time):
+        # print("No more trades after 3:00 PM.")
+        return {"status": "closed", "message": " No trades allowed before 9.20 am or after 3:00 PM."}
     
     if order_state["active"]:
-        print("Order already active. Skipping.")
+        # print("Order already active. Skipping.")
         return {"status": "active", "message": "Order already running."}
 
     if order_state["count"] >= 2:
-        print("Daily order limit reached.")
-        return {"status": "limit", "message": "Max 3 orders reached."}
+        # print("Daily order limit reached.")
+        return {"status": "limit", "message": "Max 2 orders reached."}
 
     payload = {
         "symbol": symbol,
@@ -69,7 +69,7 @@ def check_order_status(fyers):
         for order in sorted_orders:
             if order.get("id") == order_state["last_order_id"]:
                 if order.get("status") in [1,2,5]:
-                    order_state["active"] = True
+                    order_state["active"] = False
                   
 
         return {"status": "not_found", "message": "Order not found in orderbook"}

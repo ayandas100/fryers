@@ -112,7 +112,7 @@ def fryers_hist(symb,auth_code):
     access_token = gen_AcessTok(auth_code)
     fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
 
-    data = {"symbol":f"{symb}", "resolution": "15", "date_format": "1",
+    data = {"symbol":f"{symb}", "resolution": "5", "date_format": "1",
             "range_from": yesterday, "range_to": today, "cont_flag": "1"}
 
     candle_data = fyers.history(data)
@@ -183,13 +183,21 @@ def start_bot(symb,auth_code):
     df_candle['L-PC'] = abs(df_candle['low'] - df_candle['close'].shift(1))
     df_candle['TR'] = df_candle[['H-L', 'H-PC', 'L-PC']].max(axis=1)
     df_candle['ATR'] = df_candle['TR'].rolling(window=14).mean()
+    # MA 20 Bounce calculation
+    df_candle['prev_close'] = df_candle['close'].shift(1)
+    df_candle['prev_low'] = df_candle['low'].shift(1)
+    df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
+    df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
+    df_candle['MA20 SuP'] = (df_candle['MA20_support_bounce_base'] & (~df_candle['MA20_support_bounce_base'].shift(1).fillna(False)))                         
+
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
 "               join df_op b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
-    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','Above ST11','Above ST10','ATR']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10'})
+    # df = df.set_index('timestamp')
+    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -202,10 +210,10 @@ def start_bot(symb,auth_code):
 
     latest = df.iloc[0]
     previous = df.iloc[1]
-    if (previous['20 CXover'] or latest['20 CXover']) and latest['Above ST11'] and latest['Above ST10'] and latest['ATR'] >= 10:
+    if (previous['20 CXover'] or previous['MA20 SuP'] or latest['20 CXover']) and latest['Above ST11'] and latest['Above ST10'] and latest['ATR'] >= 10:
         ltp = df['LTP'].iloc[0]
         stop_loss = 8
-        target = 15
+        target = 10
         qty = 1
         symbol = symb
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
@@ -222,7 +230,7 @@ def start_bot(symb,auth_code):
                         [{'selector': 'td', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]},
                         {'selector': 'th', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]}]
                     )\
-                    .to_html(index=False, table_attributes='class="table table-bordered table-hover table-sm w-100"')
+                    .to_html(table_attributes='class="table table-bordered table-hover table-sm w-100"')
 
    
     return styled_html,order_response
