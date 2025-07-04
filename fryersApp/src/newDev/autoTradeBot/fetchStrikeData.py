@@ -210,10 +210,12 @@ def start_bot(symb,auth_code):
 
     latest = df.iloc[0]
     previous = df.iloc[1]
-    if (previous['20 CXover'] or previous['MA20 SuP'] or latest['20 CXover']) and latest['Above ST11'] and latest['Above ST10'] and latest['ATR'] >= 10:
+
+    if (previous['20 CXover'] or previous['MA20 SuP'] or latest['20 CXover']) and latest['Above ST11'] and latest['Above ST10'] and latest['ATR'] >= 8.50:
         ltp = df['LTP'].iloc[0]
         stop_loss = 8
-        target = 10
+        atr = latest['ATR']
+        target = 10 if 8.5 <= atr <= 12 else 15 if atr > 12 else 8
         qty = 1
         symbol = symb
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
