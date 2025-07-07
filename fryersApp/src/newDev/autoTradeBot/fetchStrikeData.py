@@ -217,7 +217,7 @@ def start_bot(symb,auth_code):
         ltp = df['LTP'].iloc[0]
         stop_loss = 8
         atr = latest['ATR']
-        target = 10 if 9.50 <= atr <= 12 else 15 if atr > 12 else 8
+        target = 10 if 9.50 <= atr <= 15 else 15 if atr > 15 else 8
         # target = 15
         qty = 75
         symbol = symb
