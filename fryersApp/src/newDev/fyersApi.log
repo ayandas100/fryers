@@ -49,3 +49,4 @@
 {"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/history","Error":{"code":-300,"message":"Invalid symbol provided","s":"error"}},"timestamp":"2025-07-07 11:42:34,177+0530","service":"FyersAPI"}
 {"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/history","Error":{"code":-300,"message":"Invalid symbol provided","s":"error"}},"timestamp":"2025-07-07 11:42:49,465+0530","service":"FyersAPI"}
 {"level":"ERROR","location":"[get_call:146] fyersModel","message":{"API":"/history","Error":{"code":-300,"message":"Invalid symbol provided","s":"error"}},"timestamp":"2025-07-07 11:43:05,386+0530","service":"FyersAPI"}
+{"level":"ERROR","location":"[post_call:89] fyersModel","message":{"API":"/orders/sync","Error":{"code":-50,"message":"1 not a multiple of minimum lot size 75","s":"error"}},"timestamp":"2025-07-07 13:00:20,213+0530","service":"FyersAPI"}
