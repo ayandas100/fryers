@@ -8,7 +8,7 @@
 </head>
 <body class="bg-light">
     <div class="text-center my-3">
-        <p id="refresh-timer" class="text-muted">🔄 Refreshing in 30s</p>
+        <p id="refresh-timer" class="text-muted">🔄 Refreshing in 10s</p>
     </div>
     <div class="container py-5">
         <h3 class="text-center mb-4">📋 Current/Latest Order Status</h3>
@@ -53,7 +53,7 @@
         </div>
     </div>
 <script>
-    let seconds = 30;
+    let seconds = 10;
 
     function updateTimer() {
         document.getElementById("refresh-timer").textContent = `🔄 Refreshing in ${seconds}s`;
