@@ -13,9 +13,9 @@ order_state = {
 
 def place_bo_order(fyers, symbol, qty, stop_loss, target):
     """
-    Places a Bracket Order (BO) if no other active order and count < 3.
+    Places a Bracket Order (BO) if no other active order and count < 2.
     """
-    start_time = datetime.strptime("09:20", "%H:%M").time()
+    start_time = datetime.strptime("09:30", "%H:%M").time()
     end_time = datetime.strptime("15:00", "%H:%M").time()
     now = datetime.now().time()
     if not (start_time <= now < end_time):

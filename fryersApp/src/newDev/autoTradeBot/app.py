@@ -14,35 +14,42 @@ import json
 from symbolLoad import loadSymbol
 
 app = Flask(__name__)
-session = {}
+app.secret_key = 'supersecretkey'
+# session = {}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     auth_url = getAuthCode()
     if request.method == 'POST':
-        session['token'] = request.form['access_token']
-        session['ce_symbol'] = request.form['ce_symbol']
-        session['pe_symbol'] = request.form['pe_symbol']
-        session['stop_loss'] = float(request.form['stop_loss'])
-        session['target'] = float(request.form['target'])
+        flask_session['token'] = request.form['access_token']
+        # flask_session['ce_symbol'] = request.form['ce_symbol']
+        # session['pe_symbol'] = request.form['pe_symbol']
+        # session['stop_loss'] = float(request.form['stop_loss'])
+        # session['target'] = float(request.form['target'])
         return render_template('result.html')  # triggers auto-refresh
     return render_template('index.html',auth_url=auth_url)
 
 @app.route('/data')
 def get_data():
     try:
-        stop_loss = session['stop_loss']
-        target = session['target']
+        # stop_loss = session['stop_loss']
+        # target = session['target']
         global token
-        token = session['token']        
-        ce, pe = loadSymbol(token, use_flask_session=True)
-        # print("📦 Symbols:", ce, pe)
+        token = flask_session['token']        
+        
+        
+        ce, pe = loadSymbol(token, use_flask_session=False)
+        # ce, pe = loadSymbol(token)
+        # ce = session['ce_symbol']
+        # pe = session['pe_symbol']
+        print("📦 Symbols:", ce, pe)
         ce_table,ce_order_msg = start_bot(ce, token)
         pe_table,pe_order_msg = start_bot(pe, token)
 
         # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
         # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
-
+        # print("Returning data to frontend")
+        # print("CE Table:", ce_table[:200]) 
         return jsonify({
             'ce_table': ce_table,
             'pe_table': pe_table,

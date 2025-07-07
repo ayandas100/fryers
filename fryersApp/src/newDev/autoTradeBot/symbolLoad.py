@@ -41,6 +41,8 @@ def selectStrike(df):
 
     ce = dfd_ce.iloc[0, 0] if not dfd_ce.empty else None
     pe = dfd_pe.iloc[0, 0] if not dfd_pe.empty else None
+    # ce = "NSE:NIFTY2571025450CE"
+    # pe = "NSE:NIFTY2571025550PE"
     return [ce, pe]
 
 
@@ -48,12 +50,12 @@ symbol_cache = {}
 
 def loadSymbol(auth_code, use_flask_session=True):
     # ✅ Use flask session only when inside a web request
-    if use_flask_session:
-        from flask import session as flask_session
-        if 'ce_symbol' in flask_session and 'pe_symbol' in flask_session:
-            return flask_session['ce_symbol'], flask_session['pe_symbol']
+    # if use_flask_session:
+    #     from flask import session as flask_session
+    #     if 'ce_symbol' in flask_session and 'pe_symbol' in flask_session:
+    #         return flask_session['ce_symbol'], flask_session['pe_symbol']
 
-    # ✅ CLI or fallback global cache
+    # ✅ CLI or fallback global cache... use thsi for one session of app.py run(the strike data will persist here for one session)
     if 'ce' in symbol_cache and 'pe' in symbol_cache:
         return symbol_cache['ce'], symbol_cache['pe']
 
@@ -72,5 +74,5 @@ def loadSymbol(auth_code, use_flask_session=True):
     if use_flask_session:
         flask_session['ce_symbol'] = ce
         flask_session['pe_symbol'] = pe
-
+    # print(ce,pe)
     return ce, pe
