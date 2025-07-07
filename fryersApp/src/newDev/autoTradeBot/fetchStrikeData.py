@@ -213,7 +213,7 @@ def start_bot(symb,auth_code):
     latest = df.iloc[0]
     previous = df.iloc[1]
 
-    if (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and ((latest['ATR'] >= 9.50 and latest[f'ATR {arrow}']) or latest['ATR'] >=10) :
+    if (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and ((latest['ATR'] >= 10.50 and latest[f'ATR {arrow}']) or latest['ATR'] >=12) :
         ltp = df['LTP'].iloc[0]
         stop_loss = 8
         atr = latest['ATR']
