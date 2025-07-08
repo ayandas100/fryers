@@ -31,7 +31,7 @@ client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
 yesterday = datetime.today() - timedelta(days=1)
 yesterday = yesterday.strftime('%Y-%m-%d')
-
+third_block_trigger = False
 
 def getAuthCode():
     client_id = "15YI17TORX-100"
@@ -245,7 +245,11 @@ def start_bot(symb,auth_code):
     df_candle['prev_low'] = df_candle['low'].shift(1)
     df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
     df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
-    df_candle['MA20 SuP'] = (df_candle['MA20_support_bounce_base'] & (~df_candle['MA20_support_bounce_base'].shift(1).fillna(False)))                         
+    df_candle['MA20 SuP'] = df_candle['MA20_support_bounce_base'] & \
+                        (~df_candle['MA20_support_bounce_base'].shift(1).fillna(True)) & \
+                        (~df_candle['20 CXover']) & \
+                        (~df_candle['20 CXover'].shift(1).fillna(False))
+    
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
 
@@ -274,6 +278,9 @@ def start_bot(symb,auth_code):
     entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10']
     first_block = ((latest['ATR'] >= 8.5 and latest[f'ATR {arrow}']) or latest['ATR'] >= 10) and latest['ma20 SL4']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
+    third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest['ma20 SL4']
+    
+    global third_block_trigger
     
     stop_loss = 8
     qty = 75
@@ -281,12 +288,17 @@ def start_bot(symb,auth_code):
 
     # Set default
     target = None
-
+    
     if entry_trigger and first_block:
         target = 10
+        
 
     elif entry_trigger and second_block:
-        target = 15
+        target = 10
+    
+    elif third_block and not third_block_trigger:
+        target = 10
+        third_block_trigger = True
 
     if target:
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)

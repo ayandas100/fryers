@@ -154,7 +154,7 @@ def order_status_current():
         return f"Error: {e}", 500
 
 # global_token must be set after login POST
-from datetime import datetime
+from datetime import datetimes
 import time
 import threading
 
@@ -163,10 +163,12 @@ import threading
 def wait_until_market_opens():
     global token
     while True:
-        now = datetime.now().strftime("%H:%M")
+        now = datetime.now().time()
+        start_time = datetime.strptime("09:15", "%H:%M").time()
+        end_time = datetime.strptime("15:14", "%H:%M").time()
 
         # Check if it's after 9:15 AND token is available
-        if now >= "09:15" and token:
+        if start_time <= now <= end_time and token:
             print("✅ It's 9:15 AM. Token is available. Loading symbols...")
             try:
                 loadSymbol(token)
@@ -175,7 +177,7 @@ def wait_until_market_opens():
                 print("❌ Error loading symbols:", str(e))
             break
         else:
-            print("🕒 Waiting for 9:15 AM...")
+            print("🕒 Waiting for market to open...")
 
         time.sleep(30)
 
