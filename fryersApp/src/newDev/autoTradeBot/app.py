@@ -12,6 +12,11 @@ import os
 from orderStatusCurrent import get_current_order_details
 import json
 from symbolLoad import loadSymbol
+from datetime import datetime
+import time
+import threading
+
+
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -154,9 +159,6 @@ def order_status_current():
         return f"Error: {e}", 500
 
 # global_token must be set after login POST
-from datetime import datetimes
-import time
-import threading
 
 # symbol_cache = {}
 
