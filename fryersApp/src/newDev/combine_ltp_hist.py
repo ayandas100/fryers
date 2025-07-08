@@ -14,6 +14,8 @@ import duckdb as db
 import pandas_ta as ta
 from autoTradeBot.placeOrder import check_order_status,place_bo_order
 from autoTradeBot.symbolLoad import loadSymbol
+import numpy as np
+
 
 client_id = "15YI17TORX-100"
 # secret_key = "2HJ9AD57A5"
@@ -127,6 +129,48 @@ def fryers_chain(fyers):
 #         return symbol_list
 
 
+def compute_atr(df, period=14):
+    high_low = df['high'] - df['low']
+    high_close = np.abs(df['high'] - df['close'].shift(1))
+    low_close = np.abs(df['low'] - df['close'].shift(1))
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = tr.rolling(window=period).mean()
+    return atr
+
+def angle(series, atr):
+    rad2deg = 180 / np.pi
+    slope = rad2deg * np.arctan((series - series.shift(1)) / atr)
+    return slope
+
+def maAngle(df):
+    df = df
+    # Calculate ohlc4
+    df['ohlc4'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
+    df['ATR1'] = compute_atr(df)
+
+    # EMA20 and its slope
+    df['ema20'] = df['ohlc4'].ewm(span=20, adjust=False).mean()
+    df['ema20_slope'] = angle(df['ema20'], df['ATR1'])
+
+    # Boolean column: is slope >= 4 degrees?
+    df['ma20SL_ge4'] = df['ema20_slope'] >= 4
+
+    return df
+
+def compute_rsi(df, price_col='close', period=14):
+    df = df.copy()
+    delta = df[price_col].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+
+    rs = avg_gain / avg_loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+    arrow = '\u2191'
+    df[f'RSI {arrow}'] = df['RSI'] > df['RSI'].shift(1)
+    return df
 
 def start_bot(symb,fyers):
     
@@ -179,8 +223,10 @@ def start_bot(symb,fyers):
     df_candle['prev_low'] = df_candle['low'].shift(1)
     df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
     df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
-    df_candle['MA20 SuP'] = (df_candle['MA20_support_bounce_base'] & (~df_candle['MA20_support_bounce_base'].shift(1).fillna(False)))                         
-
+    df_candle['MA20 SuP'] = (df_candle['MA20_support_bounce_base'] & (~df_candle['MA20_support_bounce_base'].shift(1).fillna(False)))
+    # df = df_candle                         
+    df_candle = maAngle(df_candle)
+    df_candle = compute_rsi(df_candle)
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
@@ -188,7 +234,7 @@ def start_bot(symb,fyers):
 "               on a.symbol=b.symbol")
     df = dbdf.df()
     # df = df.set_index('timestamp')
-    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
+    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20SL_ge4','RSI',f'RSI {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -201,11 +247,11 @@ def start_bot(symb,fyers):
 
 
 if __name__ == '__main__':
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2EwTjdES1JuNEJRbkt2bDZSWk1vd2JoWkY0VG14R2xvWnI4LWdBSWg4bElIVnlzYnFzNWVka3pKQmpON0VRT2J5dGhkb1lGekg1VmJ1OFJWNWQ3STkxSnpjWGtjRThPWVNDNmJsWTlQZ0YxbkcyYz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxOTM0NjAwLCJpYXQiOjE3NTE4NjAwOTEsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTg2MDA5MSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.KKxoZsjxfaU5C5NzcgInn-WAIzMBmavcIRp_IKfhQoE"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2JSSVBfeHNIZVpTR3FHdFloeU1xalA5OWV3U0F6NWZnUWkyMWhZOUNSc1NibzR4Wkd1SDZRX0VaeHVHcFJ1MmJERUtMdDUzLU43bTFvd1AzVnN3NmwyazkwRTJNZlZtNmo2UHlGZUN0Y29jY0ZpRT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMDIxMDAwLCJpYXQiOjE3NTE5Nzg1MTEsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTk3ODUxMSwic3ViIjoiYWNjZXNzX3Rva2VuIn0._64imkvw6tEwTiMPvp9jzXcfkCcvKvpS9_ReHEYyAh4"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
-    symb1 = "NSE:NIFTY2571025450CE"
+    symb1 = "NSE:NIFTY2571025350CE"
     symbl2 = "NSE:NIFTY2571025550PE"
-    pe = start_bot(symbl2,fyers)
-    print(pe)
+    ce = start_bot(symb1,fyers)
+    print(ce)

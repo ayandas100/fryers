@@ -24,6 +24,8 @@ import pandas_ta as ta
 from placeOrder import check_order_status,place_bo_order,get_order_state
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+import numpy as np
+
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
@@ -91,6 +93,7 @@ def highlight_supertrend(row):
     close = row.get('close')
     
     styles = [''] * len(row)
+    columns = list(row.index)
     
     if pd.notna(st_11) and pd.notna(close):
         st_11_index = row.index.get_loc('ST_11')
@@ -105,6 +108,16 @@ def highlight_supertrend(row):
             styles[st_10_index] = 'background-color: lightgreen'
         elif st_10 > close:
             styles[st_10_index] = 'background-color: lightcoral'
+    # Make '20 CXvr' and 'MA20 Sup' bold if True
+        if '20 CXvr' in columns:
+            idx = columns.index('20 CXvr')
+            if row['20 CXvr'] == True:
+                styles[idx] = 'font-weight: bold;'
+
+        if 'MA20 SuP' in columns:
+            idx = columns.index('MA20 SuP')
+            if row['MA20 SuP'] == True:
+                styles[idx] = 'font-weight: bold;'            
 
     return styles
 
@@ -136,6 +149,48 @@ def fryersOrder(auth_code):
     fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
     return fyers
 
+def compute_atr(df, period=14):
+    high_low = df['high'] - df['low']
+    high_close = np.abs(df['high'] - df['close'].shift(1))
+    low_close = np.abs(df['low'] - df['close'].shift(1))
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = tr.rolling(window=period).mean()
+    return atr
+
+def angle(series, atr):
+    rad2deg = 180 / np.pi
+    slope = rad2deg * np.arctan((series - series.shift(1)) / atr)
+    return slope
+
+def maAngle(df):
+    df = df
+    # Calculate ohlc4
+    df['ohlc4'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
+    df['ATR1'] = compute_atr(df)
+
+    # EMA20 and its slope
+    df['ema20'] = df['ohlc4'].ewm(span=20, adjust=False).mean()
+    df['ema20_slope'] = angle(df['ema20'], df['ATR1'])
+
+    # Boolean column: is slope >= 4 degrees?
+    df['ma20 SL4'] = df['ema20_slope'] >= 4
+
+    return df
+
+def compute_rsi(df, price_col='close', period=14):
+    df = df.copy()
+    delta = df[price_col].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+
+    rs = avg_gain / avg_loss
+    df['RSI'] = (100 - (100 / (1 + rs)))
+    arrow = '\u2191'
+    df[f'RSI {arrow}'] = df['RSI'] > df['RSI'].shift(1)
+    return df
 
 
 # the logic block
@@ -160,7 +215,7 @@ def start_bot(symb,auth_code):
     df_candle["timestamp"] = (
         pd.to_datetime(df_candle["timestamp"], unit="s", utc=True)
         .dt.tz_convert("Asia/Kolkata")
-        .dt.strftime("%Y-%m-%d %H:%M:%S")
+        .dt.strftime("%m-%d %H:%M")
     )
 
     df_candle = df_candle.sort_values(by="timestamp").reset_index(drop=True)
@@ -191,7 +246,8 @@ def start_bot(symb,auth_code):
     df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
     df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
     df_candle['MA20 SuP'] = (df_candle['MA20_support_bounce_base'] & (~df_candle['MA20_support_bounce_base'].shift(1).fillna(False)))                         
-
+    df_candle = maAngle(df_candle)
+    df_candle = compute_rsi(df_candle)
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
@@ -199,7 +255,8 @@ def start_bot(symb,auth_code):
 "               on a.symbol=b.symbol")
     df = dbdf.df()
     # df = df.set_index('timestamp')
-    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR'})
+    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20 SL4','RSI',f'RSI {arrow}']]. \
+                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -213,20 +270,47 @@ def start_bot(symb,auth_code):
     latest = df.iloc[0]
     previous = df.iloc[1]
 
-    if (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and ((latest['ATR'] >= 10.50 and latest[f'ATR {arrow}']) or latest['ATR'] >=12) :
-        ltp = df['LTP'].iloc[0]
-        stop_loss = 8
-        atr = latest['ATR']
-        target = 10 if 9.50 <= atr <= 15 else 15 if atr > 15 else 8
-        # target = 15
-        qty = 75
-        symbol = symb
+    ### entry conditions
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10']
+    first_block = ((latest['ATR'] >= 8.5 and latest[f'ATR {arrow}']) or latest['ATR'] >= 10) and latest['ma20 SL4']
+    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
+    
+    stop_loss = 8
+    qty = 75
+    symbol = symb
+
+    # Set default
+    target = None
+
+    if entry_trigger and first_block:
+        target = 10
+
+    elif entry_trigger and second_block:
+        target = 15
+
+    if target:
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
     else:
         order_response = {
             "status": "skipped",
             "message": "Conditions not met for placing order."
         }
+
+    # if ((previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and ((latest['ATR'] >= 8.5 and latest[f'ATR {arrow}']) or latest['ATR'] >=10) and  latest['ma20 SL4']) \
+    #     or ((previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']):
+    #     ltp = df['LTP'].iloc[0]
+    #     stop_loss = 8
+    #     atr = latest['ATR']
+    #     target = 10
+    #     # target = 15
+    #     qty = 75
+    #     symbol = symb
+    #     order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
+    # else:
+    #     order_response = {
+    #         "status": "skipped",
+    #         "message": "Conditions not met for placing order."
+    #     }
 
     
 

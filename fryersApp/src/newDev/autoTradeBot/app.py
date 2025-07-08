@@ -15,41 +15,93 @@ from symbolLoad import loadSymbol
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
-# session = {}
+session = {}
+token = None 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     auth_url = getAuthCode()
     if request.method == 'POST':
+        session['token'] = request.form['access_token']
         flask_session['token'] = request.form['access_token']
+        global token
+        token = session['token']  
         # flask_session['ce_symbol'] = request.form['ce_symbol']
         # session['pe_symbol'] = request.form['pe_symbol']
         # session['stop_loss'] = float(request.form['stop_loss'])
         # session['target'] = float(request.form['target'])
+        threading.Thread(target=wait_until_market_opens, daemon=True).start()
         return render_template('result.html')  # triggers auto-refresh
     return render_template('index.html',auth_url=auth_url)
+
+
+# def getTok():
+#     global token
+#     token = session['token']        
+#     return token
+
+# def load_ce_pe_tables(token):
+#     ce, pe = loadSymbol(token)
+#     print("📦 Symbols:", ce, pe)
+#     ce_table, ce_order_msg = start_bot(ce, token)
+#     pe_table, pe_order_msg = start_bot(pe, token)
+#     return ce, pe, ce_table, pe_table, ce_order_msg, pe_order_msg
+    
+# @app.route('/data')
+# def get_data():
+#     try:
+#         # stop_loss = session['stop_loss']
+#         # target = session['target']        
+#         # token = getTok()
+#         ce, pe = loadSymbol(token)
+#         # ce, pe = loadSymbol(token)
+#         # ce = session['ce_symbol']
+#         # pe = session['pe_symbol']
+    
+#         # print("📦 Symbols:", ce, pe)
+#         ce_table,ce_order_msg = start_bot(ce, token)
+#         pe_table,pe_order_msg = start_bot(pe, token)
+#         # ce, pe, ce_table, pe_table, ce_order_msg, pe_order_msg = load_ce_pe_tables(token)
+
+#         # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
+#         # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
+#         # print("Returning data to frontend")
+#         # print("CE Table:", ce_table[:200]) 
+#         return jsonify({
+#             'ce_table': ce_table,
+#             'pe_table': pe_table,
+#             'ce_symbol': ce,
+#             'pe_symbol': pe,
+#             'ce_order_msg': ce_order_msg,
+#             'pe_order_msg': pe_order_msg
+#         })
+
+#     except Exception as e:
+#         return jsonify({'error': str(e)})
+
 
 @app.route('/data')
 def get_data():
     try:
-        # stop_loss = session['stop_loss']
-        # target = session['target']
         global token
-        token = flask_session['token']        
-        
-        
-        ce, pe = loadSymbol(token, use_flask_session=False)
-        # ce, pe = loadSymbol(token)
-        # ce = session['ce_symbol']
-        # pe = session['pe_symbol']
-        print("📦 Symbols:", ce, pe)
-        ce_table,ce_order_msg = start_bot(ce, token)
-        pe_table,pe_order_msg = start_bot(pe, token)
+        token = session.get('token')  # from flask session during login
+        if not token:
+            return jsonify({'error': 'Token not found in session.'})
 
-        # ce_table = ce_df.to_html(classes='table table-bordered table-sm', index=False)
-        # pe_table = pe_df.to_html(classes='table table-bordered table-sm', index=False)
-        # print("Returning data to frontend")
-        # print("CE Table:", ce_table[:200]) 
+        # ✅ Use from symbol_cache (filled by the thread after 9:15 AM)
+        from symbolLoad import symbol_cache
+
+        if 'ce' not in symbol_cache or 'pe' not in symbol_cache:
+            return jsonify({'error': 'Symbols not loaded yet. Try after 9:15 AM.'})
+
+        ce = symbol_cache['ce']
+        pe = symbol_cache['pe']
+        print("⚙️ Using cached symbols:", ce, pe)
+
+        # Call your bot logic
+        ce_table, ce_order_msg = start_bot(ce, token)
+        pe_table, pe_order_msg = start_bot(pe, token)
+
         return jsonify({
             'ce_table': ce_table,
             'pe_table': pe_table,
@@ -62,12 +114,15 @@ def get_data():
     except Exception as e:
         return jsonify({'error': str(e)})
 
+
+
+
 @app.route('/result')
 def result():
     return render_template(
         'result.html',
-        ce_symbol=flask_session.get('ce_symbol', 'Call Option (CE)'),
-        pe_symbol=flask_session.get('pe_symbol', 'Put Option (PE)')
+        ce_symbol=session.get('ce_symbol', 'Call Option (CE)'),
+        pe_symbol=session.get('pe_symbol', 'Put Option (PE)')
     )
 
 
@@ -97,6 +152,35 @@ def order_status_current():
     
     except Exception as e:
         return f"Error: {e}", 500
+
+# global_token must be set after login POST
+from datetime import datetime
+import time
+import threading
+
+# symbol_cache = {}
+
+def wait_until_market_opens():
+    global token
+    while True:
+        now = datetime.now().strftime("%H:%M")
+
+        # Check if it's after 9:15 AND token is available
+        if now >= "09:15" and token:
+            print("✅ It's 9:15 AM. Token is available. Loading symbols...")
+            try:
+                loadSymbol(token)
+                print("✅ Symbols loaded successfully after 9:15 AM.")
+            except Exception as e:
+                print("❌ Error loading symbols:", str(e))
+            break
+        else:
+            print("🕒 Waiting for 9:15 AM...")
+
+        time.sleep(30)
+
+
+
 
 
 if __name__ == '__main__':

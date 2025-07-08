@@ -8,15 +8,22 @@
             width: 100%;
             table-layout: fixed;
             text-align: center;
-            font-size: 14px;
+            font-size: 10px;
         }
         th {
             background-color: #f8f9fa;
+            font-size: 11px; 
+            padding: 2px;
         }
         th, td {
-            padding: 8px;
-            min-width: 100px;
+            padding: 4px;
+            min-width: 140px;
         }
+    </style>
+    <style>
+    body {
+        zoom: 110%; /* ensures page is at normal scale */
+    }
     </style>
 </head>
 <body class="bg-light">
@@ -102,7 +109,7 @@
         seconds--;
         if (seconds < 0) {
             fetchData();
-            seconds = 10;
+            seconds = 20;
         }
     }
 

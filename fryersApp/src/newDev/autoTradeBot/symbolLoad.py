@@ -71,8 +71,8 @@ def loadSymbol(auth_code, use_flask_session=True):
     symbol_cache['pe'] = pe
 
     # Also store in flask session if inside Flask context
-    if use_flask_session:
-        flask_session['ce_symbol'] = ce
-        flask_session['pe_symbol'] = pe
+    # if use_flask_session:
+    #     flask_session['ce_symbol'] = ce
+    #     flask_session['pe_symbol'] = pe
     # print(ce,pe)
     return ce, pe
