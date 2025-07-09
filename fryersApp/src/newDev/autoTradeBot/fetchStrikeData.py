@@ -246,9 +246,9 @@ def start_bot(symb,auth_code):
     df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
     df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
     df_candle['MA20 SuP'] = df_candle['MA20_support_bounce_base'] & \
-                        (~df_candle['MA20_support_bounce_base'].shift(1).fillna(True)) & \
-                        (~df_candle['20 CXover']) & \
-                        (~df_candle['20 CXover'].shift(1).fillna(False))
+                        (~df_candle['MA20_support_bounce_base'].shift(1).fillna(True))
+                        # (~df_candle['20 CXover']) & \
+                        # (~df_candle['20 CXover'].shift(1).fillna(False))
     
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
@@ -277,13 +277,13 @@ def start_bot(symb,auth_code):
 
     ### entry conditions
     entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest[f'LTP {arrow}']
-    first_block = latest['ATR'] >= 8.5 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
+    first_block = latest['ATR'] >= 8 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
-    third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 13 and latest['ma20 SL4']
+    third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 10 and latest[f'LTP {arrow}']
     
     global third_block_trigger
     
-    stop_loss = 8
+    stop_loss = 10
     qty = 75
     symbol = symb
 
@@ -293,7 +293,6 @@ def start_bot(symb,auth_code):
     if entry_trigger and first_block:
         target = 10
         
-
     elif entry_trigger and second_block:
         target = 10
     
