@@ -277,9 +277,9 @@ def start_bot(symb,auth_code):
 
     ### entry conditions
     entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest[f'LTP {arrow}']
-    first_block = ((latest['ATR'] >= 8.5 and latest[f'ATR {arrow}']) or latest['ATR'] >= 10) and latest['ma20 SL4']
+    first_block = latest['ATR'] >= 8.5 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
-    third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest['ma20 SL4']
+    third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 13 and latest['ma20 SL4']
     
     global third_block_trigger
     

@@ -3,7 +3,7 @@ from datetime import date
 client_id = "15YI17TORX-100"
 # today = date.today().strftime("%Y-%m-%d")
 from datetime import datetime
-
+from take_order_screenshot import take_screenshot
 # Global state
 order_state = {
     "active": False,
@@ -46,9 +46,11 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
     try:
         
         response = fyers.place_order(payload)
+        take_screenshot()
         order_state["active"] = True
         order_state["count"] += 1
         order_state["last_order_id"] = response.get("id")
+
         return response.get("message")
     except Exception as e:
         print("Order Error:", e)
