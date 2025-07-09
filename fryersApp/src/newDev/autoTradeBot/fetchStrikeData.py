@@ -252,14 +252,15 @@ def start_bot(symb,auth_code):
     
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
-
+   
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
 "               join df_op b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
+    df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20 SL4','RSI',f'RSI {arrow}']]. \
+    df = df[['timestamp','high','close','ltp',f'LTP {arrow}','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20 SL4','RSI',f'RSI {arrow}']]. \
                 rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
@@ -275,7 +276,7 @@ def start_bot(symb,auth_code):
     previous = df.iloc[1]
 
     ### entry conditions
-    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10']
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest[f'LTP {arrow}']
     first_block = ((latest['ATR'] >= 8.5 and latest[f'ATR {arrow}']) or latest['ATR'] >= 10) and latest['ma20 SL4']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
     third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest['ma20 SL4']

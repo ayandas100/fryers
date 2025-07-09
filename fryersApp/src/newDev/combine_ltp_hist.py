@@ -227,14 +227,16 @@ def start_bot(symb,fyers):
     # df = df_candle                         
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
+    
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
 "               join df_op b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
+    df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20SL_ge4','RSI',f'RSI {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
+    df = df[['timestamp','close','ltp',f'LTP {arrow}','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20SL_ge4','RSI',f'RSI {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -247,7 +249,7 @@ def start_bot(symb,fyers):
 
 
 if __name__ == '__main__':
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2JSSVBfeHNIZVpTR3FHdFloeU1xalA5OWV3U0F6NWZnUWkyMWhZOUNSc1NibzR4Wkd1SDZRX0VaeHVHcFJ1MmJERUtMdDUzLU43bTFvd1AzVnN3NmwyazkwRTJNZlZtNmo2UHlGZUN0Y29jY0ZpRT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMDIxMDAwLCJpYXQiOjE3NTE5Nzg1MTEsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTk3ODUxMSwic3ViIjoiYWNjZXNzX3Rva2VuIn0._64imkvw6tEwTiMPvp9jzXcfkCcvKvpS9_ReHEYyAh4"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2JmcVkwN2EyUW1ZYjdwRTh2SURsTGl6MHZBNXh4M1BwVy1IYmxDaXN4bE9iTGhHVjFuYUN5SUl1M1R3aFMwQkdBdVdLRVFQVmhJeXFBaGFmQVVpRHFUNUxydHl1UGVUQ0RGcHBfMzBKdnV6RzNKYz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMTA3NDAwLCJpYXQiOjE3NTIwMzgwNDAsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjAzODA0MCwic3ViIjoiYWNjZXNzX3Rva2VuIn0.WPVRw1pjygx50mqcyeoQnrrBSVxe4Z-JKCqZ4BLS9RM"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
