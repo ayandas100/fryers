@@ -25,7 +25,8 @@ from placeOrder import check_order_status,place_bo_order,get_order_state
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import numpy as np
-
+from highlight_row import highlight_supertrend
+from ta.momentum import RSIIndicator
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
@@ -87,39 +88,6 @@ def gen_AcessTok(auth_code):
     return access_token
 
 
-def highlight_supertrend(row):
-    st_11 = row.get('ST_11')
-    st_10 = row.get('ST_10')
-    close = row.get('close')
-    
-    styles = [''] * len(row)
-    columns = list(row.index)
-    
-    if pd.notna(st_11) and pd.notna(close):
-        st_11_index = row.index.get_loc('ST_11')
-        if st_11 < close:
-            styles[st_11_index] = 'background-color: lightgreen'
-        elif st_11 > close:
-            styles[st_11_index] = 'background-color: lightcoral'
-
-    if pd.notna(st_10) and pd.notna(close):
-        st_10_index = row.index.get_loc('ST_10')
-        if st_10 < close:
-            styles[st_10_index] = 'background-color: lightgreen'
-        elif st_10 > close:
-            styles[st_10_index] = 'background-color: lightcoral'
-    # Make '20 CXvr' and 'MA20 Sup' bold if True
-        if '20 CXvr' in columns:
-            idx = columns.index('20 CXvr')
-            if row['20 CXvr'] == True:
-                styles[idx] = 'font-weight: bold;'
-
-        if 'MA20 SuP' in columns:
-            idx = columns.index('MA20 SuP')
-            if row['MA20 SuP'] == True:
-                styles[idx] = 'font-weight: bold;'            
-
-    return styles
 
 def fryers_hist(symb,auth_code):
     access_token = gen_AcessTok(auth_code)
@@ -177,20 +145,21 @@ def maAngle(df):
 
     return df
 
+from ta.momentum import RSIIndicator
+
 def compute_rsi(df, price_col='close', period=14):
     df = df.copy()
-    delta = df[price_col].diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-
-    avg_gain = gain.rolling(window=period).mean()
-    avg_loss = loss.rolling(window=period).mean()
-
-    rs = avg_gain / avg_loss
-    df['RSI'] = (100 - (100 / (1 + rs)))
+    
+    # Compute RSI using Wilder’s method (ta lib matches TradingView)
+    rsi_calc = RSIIndicator(close=df[price_col], window=period)
+    df['RSI'] = rsi_calc.rsi()
+    
+    # Add arrow column showing RSI rising
     arrow = '\u2191'
     df[f'RSI {arrow}'] = df['RSI'] > df['RSI'].shift(1)
+    
     return df
+
 
 
 # the logic block
@@ -260,12 +229,12 @@ def start_bot(symb,auth_code):
     df = dbdf.df()
     df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','high','close','ltp',f'LTP {arrow}','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20 SL4','RSI',f'RSI {arrow}']]. \
-                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR'})
+    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}','ma20 SL4',f'RSI {arrow}','ATR','RSI']]. \
+                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
-    df = df.head(30)
+    df = df.head(35)
 
 
     fyers = fryersOrder(auth_code)
@@ -276,10 +245,10 @@ def start_bot(symb,auth_code):
     previous = df.iloc[1]
 
     ### entry conditions
-    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest[f'LTP {arrow}']
-    first_block = latest['ATR'] >= 8.50 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}']
+    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
-    third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 10 and latest[f'LTP {arrow}']
+    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 11.40 and latest[f'LTP {arrow}']
     
    
   
