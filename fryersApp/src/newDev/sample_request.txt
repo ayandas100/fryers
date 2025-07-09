@@ -1,0 +1,20 @@
+import requests
+
+url = "https://api.fyers.in/api/v2/token"
+
+headers = {
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "grant_type": "authorization_code",
+    "client_id": "YOUR_CLIENT_ID",
+    "secret_key": "YOUR_SECRET_KEY",
+    "code": "YOUR_AUTH_CODE",
+    "redirect_uri": "YOUR_REDIRECT_URI"
+}
+
+response = requests.post(url, headers=headers, json/data=payload)
+
+print(response.status_code)
+print(response.json())  # or response.text

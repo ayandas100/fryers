@@ -8,6 +8,7 @@ Created on Aug 11, 2023
 
 @author: ayan
 '''
+import time
 from datetime import date
 from fyers_apiv3 import fyersModel
 import os
@@ -18,11 +19,13 @@ import datetime as dt
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 driver = webdriver.Chrome()
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 
-
-client_id = "N3VPS274OH-100"
-secret_key = "MONNT2QWHX"
+client_id = "15YI17TORX-100"             # e.g., "ABCD12345-100"
+secret_key = "2HJ9AD57A5"
 redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
 response_type = "code"
 grant_type = "authorization_code"
@@ -39,19 +42,27 @@ def get_access_token():
     driver.get(response)
     print("Login Url : ", response)
     mob = driver.find_element("id", "mobile-code")
-    driver.implicitly_wait(1)
+    time.sleep(5)
     mob.send_keys(mobnum)
-    driver.implicitly_wait(1)
-    submitMob = driver.find_element("id", "mobileNumberSubmit")
-    submitMob.send_keys(Keys.ENTER)
+    time.sleep(5)
+    # driver.implicitly_wait(40)
+    # submitMob = driver.find_element("id", "mobileNumberSubmit")
+    # submitMob.send_keys(Keys.ENTER)
+    # driver.implicitly_wait(40)
+    wait = WebDriverWait(driver, 2)
+    checkbox = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='checkbox']")))
+    checkbox.click()
     # auth_code = input("Enter Auth Code : ")
-    driver.implicitly_wait(40)
-    auth_code = driver.find_element("id", "s_auth_code")
-    session.set_token(auth_code)
-    # access_token = session.generate_token()["access_token"]
-    access_token = session.generate_token()
-    print(access_token)
-    return access_token
+    print("exiting")
+    time.sleep(30)
+    # auth_code = driver.find_element("id", "s_auth_code")
+    # session.set_token(auth_code)
+    # # access_token = session.generate_token()["access_token"]
+    # access_token = session.generate_token()
+    # print(access_token)
+    # return access_token
 
 if __name__ == "__main__":
     get_access_token()
+
+    
