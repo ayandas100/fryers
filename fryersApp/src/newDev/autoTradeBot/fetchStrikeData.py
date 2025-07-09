@@ -31,7 +31,7 @@ client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
 yesterday = datetime.today() - timedelta(days=1)
 yesterday = yesterday.strftime('%Y-%m-%d')
-third_block_trigger = False
+
 
 def getAuthCode():
     client_id = "15YI17TORX-100"
@@ -277,52 +277,25 @@ def start_bot(symb,auth_code):
 
     ### entry conditions
     entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest[f'LTP {arrow}']
-    first_block = latest['ATR'] >= 8 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
+    first_block = latest['ATR'] >= 8.50 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
     third_block = latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 10 and latest[f'LTP {arrow}']
     
-    global third_block_trigger
-    
-    stop_loss = 10
-    qty = 75
-    symbol = symb
+   
+  
+    if (entry_trigger and first_block) or (entry_trigger and second_block) or (third_block):
 
-    # Set default
-    target = None
-    
-    if entry_trigger and first_block:
+        stop_loss = 10
         target = 10
+        qty = 75
+        symbol = symb
         
-    elif entry_trigger and second_block:
-        target = 10
-    
-    elif third_block and not third_block_trigger:
-        target = 10
-        third_block_trigger = True
-
-    if target:
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
     else:
         order_response = {
             "status": "skipped",
             "message": "Conditions not met for placing order."
         }
-
-    # if ((previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and ((latest['ATR'] >= 8.5 and latest[f'ATR {arrow}']) or latest['ATR'] >=10) and  latest['ma20 SL4']) \
-    #     or ((previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest['Above ST11'] and latest['Above ST10'] and latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']):
-    #     ltp = df['LTP'].iloc[0]
-    #     stop_loss = 8
-    #     atr = latest['ATR']
-    #     target = 10
-    #     # target = 15
-    #     qty = 75
-    #     symbol = symb
-    #     order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
-    # else:
-    #     order_response = {
-    #         "status": "skipped",
-    #         "message": "Conditions not met for placing order."
-    #     }
 
     
 
