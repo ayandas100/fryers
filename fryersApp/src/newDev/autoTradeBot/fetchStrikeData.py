@@ -27,6 +27,8 @@ from datetime import datetime, timedelta
 import numpy as np
 from highlight_row import highlight_supertrend
 from ta.momentum import RSIIndicator
+import ta
+
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
@@ -117,13 +119,13 @@ def fryersOrder(auth_code):
     fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
     return fyers
 
-def compute_atr(df, period=14):
-    high_low = df['high'] - df['low']
-    high_close = np.abs(df['high'] - df['close'].shift(1))
-    low_close = np.abs(df['low'] - df['close'].shift(1))
-    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    atr = tr.rolling(window=period).mean()
-    return atr
+# def compute_atr(df, period=14):
+#     high_low = df['high'] - df['low']
+#     high_close = np.abs(df['high'] - df['close'].shift(1))
+#     low_close = np.abs(df['low'] - df['close'].shift(1))
+#     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+#     atr = tr.rolling(window=period).mean()
+#     return atr
 
 def angle(series, atr):
     rad2deg = 180 / np.pi
@@ -134,11 +136,11 @@ def maAngle(df):
     df = df
     # Calculate ohlc4
     df['ohlc4'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
-    df['ATR1'] = compute_atr(df)
+    # df['ATR1'] = compute_atr(df)
 
     # EMA20 and its slope
     df['ema20'] = df['ohlc4'].ewm(span=20, adjust=False).mean()
-    df['ema20_slope'] = angle(df['ema20'], df['ATR1'])
+    df['ema20_slope'] = angle(df['ema20'], df['ATR'])
 
     # Boolean column: is slope >= 4 degrees?
     df['ma20 SL4'] = df['ema20_slope'] >= 4
@@ -160,6 +162,38 @@ def compute_rsi(df, price_col='close', period=14):
     
     return df
 
+def compute_atr(df, period=14):
+    df = df.copy()
+    atr_indicator = ta.volatility.AverageTrueRange(
+        high=df['high'],
+        low=df['low'],
+        close=df['close'],
+        window=period,
+        fillna=False
+    )
+    df['ATR'] = atr_indicator.average_true_range()
+    return df
+
+def compute_cvd(df, close_col='close', volume_col='volume'):
+    df = df.copy()
+    
+    # Calculate price change
+    close_diff = df[close_col].diff()
+
+    # Estimate delta (buy vs sell volume)
+    df['delta'] = np.where(
+        close_diff > 0, df[volume_col], 
+        np.where(close_diff < 0, -df[volume_col], 0)
+    )
+    
+    # Cumulative Volume Delta
+    df['CVD'] = df['delta'].cumsum()
+    
+    # CVD Up Arrow: is CVD increasing?
+    arrow = '\u2191'  # ↑
+    df[f'CVD {arrow}'] = df['CVD'] > df['CVD'].shift(1)
+    
+    return df
 
 
 # the logic block
@@ -192,7 +226,7 @@ def start_bot(symb,auth_code):
     df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
     df_candle["symbol"] = symb
    
-    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
+    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low','volume']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
     df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
 
     df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
@@ -201,15 +235,12 @@ def start_bot(symb,auth_code):
     df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
     df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
     df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
-    #ATR calculations
-    df_candle['H-L'] = df_candle['high'] - df_candle['low']
-    df_candle['H-PC'] = abs(df_candle['high'] - df_candle['close'].shift(1))
-    df_candle['L-PC'] = abs(df_candle['low'] - df_candle['close'].shift(1))
-    df_candle['TR'] = df_candle[['H-L', 'H-PC', 'L-PC']].max(axis=1)
-    df_candle['ATR'] = df_candle['TR'].rolling(window=14).mean()
+    # #ATR calculations
+    df_candle = compute_atr(df_candle)
     arrow = '\u2191'
     df_candle[f'ATR {arrow}'] = df_candle['ATR'] > df_candle['ATR'].shift(1)
     # MA 20 Bounce calculation
+    # arrow = '\u2191'
     df_candle['prev_close'] = df_candle['close'].shift(1)
     df_candle['prev_low'] = df_candle['low'].shift(1)
     df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
@@ -221,6 +252,7 @@ def start_bot(symb,auth_code):
     
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
+    df_candle = compute_cvd(df_candle)
    
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
@@ -229,7 +261,7 @@ def start_bot(symb,auth_code):
     df = dbdf.df()
     df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}','ma20 SL4',f'RSI {arrow}','ATR','RSI']]. \
+    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}','ATR','RSI','CVD']]. \
                 rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
@@ -245,14 +277,14 @@ def start_bot(symb,auth_code):
     previous = df.iloc[1]
 
     ### entry conditions
-    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}']
-    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest['CVD'] > 0
+    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and latest[f'CVD {arrow}']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
-    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 11.40 and latest[f'LTP {arrow}']
+    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 11.40 and latest[f'LTP {arrow}'] and latest['CVD'] > 0 and latest[f'CVD {arrow}']
     
    
   
-    if (entry_trigger and first_block) or (entry_trigger and second_block) or (third_block):
+    if (entry_trigger and first_block) or (entry_trigger and second_block) or third_block:
 
         stop_loss = 10
         target = 10

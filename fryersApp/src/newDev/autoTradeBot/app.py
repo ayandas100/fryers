@@ -167,7 +167,7 @@ def wait_until_market_opens():
     while True:
         now = datetime.now().time()
         start_time = datetime.strptime("09:15", "%H:%M").time()
-        end_time = datetime.strptime("15:14", "%H:%M").time()
+        end_time = datetime.strptime("21:14", "%H:%M").time()
 
         # Check if it's after 9:15 AND token is available
         if start_time <= now <= end_time and token:

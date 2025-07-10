@@ -52,13 +52,12 @@ def check_order_status(fyers):
                     reverse=True
                 )
         for order in sorted_orders:
-            if order.get("id") == order_state["last_order_id"]:
-                if order.get("status") in [1,2,5]:
-                    order_state["active"] = True
-                  
+            if  order.get("status") ==2:
+                order_state["active"] = False
+                break  
 
-        return {"status": "not_found", "message": "Order not found in orderbook"}
-
+        # return {"status": "not_found", "message": "Order not found in orderbook"}
+        return order
 
 
 
@@ -66,7 +65,7 @@ def check_order_status(fyers):
 
 if __name__ == '__main__':
     # Replace with your actual access token
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb1ozR205WHlHMzlVUG8yMkxaNW5jcTQ5NzE0c0pvcll0VWVmSnUwUzBwd1A0dXIwZURIMHVvNDBrWFFGeWdsZ1RpSWFIQzg0cEcwSlBoX1REdUZ2NDBkeEJiLW9COFYyLW9fdjh4NEg5bkswcDBZUT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxNjc1NDAwLCJpYXQiOjE3NTE2MDk3NjYsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTYwOTc2Niwic3ViIjoiYWNjZXNzX3Rva2VuIn0.2CctpHd5Vxd9hqLnD9qSCHSwrbEof8pYGfOqyLxATj8"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2IwS1hBc1pRa2Ftb3psUGhZX1M0S2x1RklJMWx3dmpxd2xRcXU5Y0JXRDVqTHNxOXRaUV9yanhrekRlOEFIeENFSE90a1ZxYWFFc2RLOVd5SU5fYTlSLVR3TVR1ZHByblAwSUFvY1BNMUpXSnQ2bz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMTkzODAwLCJpYXQiOjE3NTIxMjIwMDcsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjEyMjAwNywic3ViIjoiYWNjZXNzX3Rva2VuIn0.aTfEWjfWjJeCJSKXbXuFh8XTv_NIchtUX2yMIlMreww"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")

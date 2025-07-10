@@ -12,9 +12,11 @@ pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_rows', None)
 import duckdb as db
 import pandas_ta as ta
-from autoTradeBot.placeOrder import check_order_status,place_bo_order
+# from autoTradeBot.placeOrder import check_order_status,place_bo_order
 from autoTradeBot.symbolLoad import loadSymbol
 import numpy as np
+import ta
+
 
 
 client_id = "15YI17TORX-100"
@@ -129,13 +131,13 @@ def fryers_chain(fyers):
 #         return symbol_list
 
 
-def compute_atr(df, period=14):
-    high_low = df['high'] - df['low']
-    high_close = np.abs(df['high'] - df['close'].shift(1))
-    low_close = np.abs(df['low'] - df['close'].shift(1))
-    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    atr = tr.rolling(window=period).mean()
-    return atr
+# def compute_atr(df, period=14):
+#     high_low = df['high'] - df['low']
+#     high_close = np.abs(df['high'] - df['close'].shift(1))
+#     low_close = np.abs(df['low'] - df['close'].shift(1))
+#     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+#     atr = tr.rolling(window=period).mean()
+#     return atr
 
 def angle(series, atr):
     rad2deg = 180 / np.pi
@@ -146,11 +148,11 @@ def maAngle(df):
     df = df
     # Calculate ohlc4
     df['ohlc4'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
-    df['ATR1'] = compute_atr(df)
+    # df['ATR1'] = compute_atr(df)
 
     # EMA20 and its slope
     df['ema20'] = df['ohlc4'].ewm(span=20, adjust=False).mean()
-    df['ema20_slope'] = angle(df['ema20'], df['ATR1'])
+    df['ema20_slope'] = angle(df['ema20'], df['ATR'])
 
     # Boolean column: is slope >= 4 degrees?
     df['ma20SL_ge4'] = df['ema20_slope'] >= 4
@@ -170,6 +172,41 @@ def compute_rsi(df, price_col='close', period=14):
     df['RSI'] = 100 - (100 / (1 + rs))
     arrow = '\u2191'
     df[f'RSI {arrow}'] = df['RSI'] > df['RSI'].shift(1)
+    return df
+
+
+def compute_atr(df, period=14):
+    df = df.copy()
+    atr_indicator = ta.volatility.AverageTrueRange(
+        high=df['high'],
+        low=df['low'],
+        close=df['close'],
+        window=period,
+        fillna=False
+    )
+    df['ATR'] = atr_indicator.average_true_range()
+    return df
+
+
+def compute_cvd(df, close_col='close', volume_col='volume'):
+    df = df.copy()
+    
+    # Calculate price change
+    close_diff = df[close_col].diff()
+
+    # Estimate delta (buy vs sell volume)
+    df['delta'] = np.where(
+        close_diff > 0, df[volume_col], 
+        np.where(close_diff < 0, -df[volume_col], 0)
+    )
+    
+    # Cumulative Volume Delta
+    df['CVD'] = df['delta'].cumsum()
+    
+    # CVD Up Arrow: is CVD increasing?
+    arrow = '\u2191'  # ↑
+    df[f'CVD {arrow}'] = df['CVD'] > df['CVD'].shift(1)
+    
     return df
 
 def start_bot(symb,fyers):
@@ -201,7 +238,7 @@ def start_bot(symb,fyers):
     df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
     df_candle["symbol"] = symb
    
-    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
+    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low','volume']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
     df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
 
     df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
@@ -210,12 +247,8 @@ def start_bot(symb,fyers):
     df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
     df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
     df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
-    #ATR calculations
-    df_candle['H-L'] = df_candle['high'] - df_candle['low']
-    df_candle['H-PC'] = abs(df_candle['high'] - df_candle['close'].shift(1))
-    df_candle['L-PC'] = abs(df_candle['low'] - df_candle['close'].shift(1))
-    df_candle['TR'] = df_candle[['H-L', 'H-PC', 'L-PC']].max(axis=1)
-    df_candle['ATR'] = df_candle['TR'].rolling(window=14).mean()
+    # #ATR calculations
+    df_candle = compute_atr(df_candle)
     arrow = '\u2191'
     df_candle[f'ATR {arrow}'] = df_candle['ATR'] > df_candle['ATR'].shift(1)
     # MA 20 Bounce calculation
@@ -227,7 +260,7 @@ def start_bot(symb,fyers):
     # df = df_candle                         
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
-    
+    df_candle = compute_cvd(df_candle)
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
@@ -236,7 +269,7 @@ def start_bot(symb,fyers):
     df = dbdf.df()
     df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','close','ltp',f'LTP {arrow}','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20SL_ge4','RSI',f'RSI {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
+    df = df[['timestamp','close','ltp',f'LTP {arrow}','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20SL_ge4','RSI',f'RSI {arrow}','CVD',f'CVD {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -249,7 +282,7 @@ def start_bot(symb,fyers):
 
 
 if __name__ == '__main__':
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2JmcVkwN2EyUW1ZYjdwRTh2SURsTGl6MHZBNXh4M1BwVy1IYmxDaXN4bE9iTGhHVjFuYUN5SUl1M1R3aFMwQkdBdVdLRVFQVmhJeXFBaGFmQVVpRHFUNUxydHl1UGVUQ0RGcHBfMzBKdnV6RzNKYz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMTA3NDAwLCJpYXQiOjE3NTIwMzgwNDAsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjAzODA0MCwic3ViIjoiYWNjZXNzX3Rva2VuIn0.WPVRw1pjygx50mqcyeoQnrrBSVxe4Z-JKCqZ4BLS9RM"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2IwS1hBc1pRa2Ftb3psUGhZX1M0S2x1RklJMWx3dmpxd2xRcXU5Y0JXRDVqTHNxOXRaUV9yanhrekRlOEFIeENFSE90a1ZxYWFFc2RLOVd5SU5fYTlSLVR3TVR1ZHByblAwSUFvY1BNMUpXSnQ2bz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMTkzODAwLCJpYXQiOjE3NTIxMjIwMDcsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjEyMjAwNywic3ViIjoiYWNjZXNzX3Rva2VuIn0.aTfEWjfWjJeCJSKXbXuFh8XTv_NIchtUX2yMIlMreww"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")

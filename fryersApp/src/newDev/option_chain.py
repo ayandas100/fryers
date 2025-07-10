@@ -21,19 +21,23 @@ state = "sample_state"
 grant_type = "authorization_code"  
 today = date.today().strftime("%Y-%m-%d")
 
-access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2EwTjdES1JuNEJRbkt2bDZSWk1vd2JoWkY0VG14R2xvWnI4LWdBSWg4bElIVnlzYnFzNWVka3pKQmpON0VRT2J5dGhkb1lGekg1VmJ1OFJWNWQ3STkxSnpjWGtjRThPWVNDNmJsWTlQZ0YxbkcyYz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxOTM0NjAwLCJpYXQiOjE3NTE4NjAwOTEsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTg2MDA5MSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.KKxoZsjxfaU5C5NzcgInn-WAIzMBmavcIRp_IKfhQoE"
+access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2JycFdMT3hHbEhBenlvbnphQnhnRWFEdWo0bGZLb1lHRGl1RzFRQmw3aGllWlBRMnllb0xRZTVBa09yMXl1cWxXblBnd3ZWYVctYTRyMkhyUXVzWEdTVWgzR2VKcnl1TnlNQzVBWGZEZDViQW83UT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMTkzODAwLCJpYXQiOjE3NTIwODcxMjYsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjA4NzEyNiwic3ViIjoiYWNjZXNzX3Rva2VuIn0.K8n44-hXEgz2idVLAr5_osxHIGpEpOhqbVAVip0Np7I"
 fyers = fyersModel.FyersModel(
     client_id=client_id, token=access_token, log_path="")
 #NSE:NIFTY50-INDEX
 data = {
     "symbol":"NSE:NIFTY50-INDEX",
     "strikecount":3,
+    "timestamp": "250710" 
     
 }
 response = fyers.optionchain(data=data);
 print(json.dumps(response))
-df = pd.DataFrame(response["data"]["optionsChain"])
+latest_expiry = response['data']['expiryData'][1]['date']
+print(latest_expiry)
+
+# df = pd.DataFrame(response["data"]["expiryData"])
 # columns = ["symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
 
 # df = df[columns]
-print(df.head(20)) 
+# print(df.head(20)) 

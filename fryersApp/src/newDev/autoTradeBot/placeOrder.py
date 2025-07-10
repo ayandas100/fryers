@@ -4,6 +4,8 @@ client_id = "15YI17TORX-100"
 # today = date.today().strftime("%Y-%m-%d")
 from datetime import datetime
 from take_order_screenshot import take_screenshot
+today = datetime.now().weekday()
+
 # Global state
 order_state = {
     "active": False,
@@ -25,10 +27,10 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
     if order_state["active"]:
         # print("Order already active. Skipping.")
         return {"status": "active", "message": "Order already running."}
-
-    if order_state["count"] >= 2:
-        # print("Daily order limit reached.")
-        return {"status": "limit", "message": "Max 2 orders reached."}
+    
+    max_orders = 1 if today == 3 else 2
+    if order_state["count"] >= max_orders:
+        return {"status": "limit", "message": f"Max {max_orders} orders reached for today."}
 
     payload = {
         "symbol": symbol,
@@ -69,13 +71,12 @@ def check_order_status(fyers):
                     reverse=True
                 )
         for order in sorted_orders:
-            if order.get("id") == order_state["last_order_id"]:
-                if order.get("status") in [1,2,5]:
-                    order_state["active"] = False
-                  
+            if  order.get("status") ==2:
+                order_state["active"] = False
+                break  
 
         return {"status": "not_found", "message": "Order not found in orderbook"}
-
+        # return order
 
 
 def get_order_state():
