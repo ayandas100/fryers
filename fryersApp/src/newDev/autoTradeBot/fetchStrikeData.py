@@ -142,9 +142,11 @@ def maAngle(df):
     df['ema20'] = df['ohlc4'].ewm(span=20, adjust=False).mean()
     df['ema20_slope'] = angle(df['ema20'], df['ATR'])
 
+
+
     # Boolean column: is slope >= 4 degrees?
     df['ma20 SL4'] = df['ema20_slope'] >= 4
-
+    
     return df
 
 from ta.momentum import RSIIndicator
@@ -319,7 +321,7 @@ def start_bot(symb,auth_code):
     ### entry conditions
     entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
     first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and previous[f'RSI{arrow} SML'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
-    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA']
+    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and  previous[f'RSI{arrow} SML']
     third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and previous['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
     
    
@@ -327,7 +329,7 @@ def start_bot(symb,auth_code):
     if (entry_trigger and first_block) or (entry_trigger and second_block) or third_block :
 
         stop_loss = 8
-        target = 8
+        target = 10
         qty = 75
         symbol = symb
         
