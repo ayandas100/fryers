@@ -97,14 +97,6 @@ def highlight_supertrend(row):
         idx = columns.index(cvd_col)
         if row[cvd_col] == True:
             styles[idx] = 'font-weight: bold;'
-
-    all_col = [f'LTP {arrow}',f'ST11{arrow}',f'ST10{arrow}',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}']
-    if all(row.get(col) == True for col in all_col):
-        for col in all_col:
-            if col in columns:
-                idx = columns.index(col)
-                # current_style = styles.get(idx, "")
-                styles[idx] = 'font-weight: bold; background-color: darkgreen;'
     
     
     return styles

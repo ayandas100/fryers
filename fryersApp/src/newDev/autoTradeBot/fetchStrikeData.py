@@ -325,7 +325,6 @@ def start_bot(symb,auth_code):
         }
 
     
-
     styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2)\
                     .set_table_styles(
                         [{'selector': 'td', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]},
