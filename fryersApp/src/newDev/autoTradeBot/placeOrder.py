@@ -2,27 +2,38 @@ from fyers_apiv3 import fyersModel
 from datetime import date
 client_id = "15YI17TORX-100"
 # today = date.today().strftime("%Y-%m-%d")
-from datetime import datetime
+from datetime import datetime, timedelta
 from take_order_screenshot import take_screenshot
 today = datetime.now().weekday()
+now = datetime.now().time()
 
 # Global state
 order_state = {
     "active": False,
     "count": 0,
-    "last_order_id": None
+    "last_order_id": None,
+    "last_trade_time": datetime.combine(datetime.today(), datetime.strptime("09:00", "%H:%M").time())
 }
 
 def place_bo_order(fyers, symbol, qty, stop_loss, target):
     """
     Places a Bracket Order (BO) if no other active order and count < 2.
     """
-    start_time = datetime.strptime("09:20", "%H:%M").time()
+    start_time = datetime.strptime("09:25", "%H:%M").time()
     end_time = datetime.strptime("15:00", "%H:%M").time()
     now = datetime.now().time()
     if not (start_time <= now < end_time):
         # print("No more trades after 3:00 PM.")
         return {"status": "closed", "message": " No trades allowed before 9.20 am or after 3:00 PM."}
+    
+    
+    # Don't place trade if 15 minutes haven't passed since last trade
+    if now < order_state["last_trade_time"] + timedelta(minutes=15):
+        wait_minutes = (order_state["last_trade_time"] + timedelta(minutes=15) - now).seconds // 60
+        return {
+            "status": "cooldown",
+            "message": f"Please wait {wait_minutes} more minute(s) before placing the next trade."
+        }
     
     if order_state["active"]:
         # print("Order already active. Skipping.")
@@ -52,8 +63,9 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         order_state["active"] = True
         order_state["count"] += 1
         order_state["last_order_id"] = response.get("id")
+        order_state["last_trade_time"] = now
 
-        return response.get("message")
+        return response
     except Exception as e:
         print("Order Error:", e)
         return {"status": "error", "message": str(e)}

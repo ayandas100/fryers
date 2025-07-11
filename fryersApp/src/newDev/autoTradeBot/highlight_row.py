@@ -1,22 +1,22 @@
 import pandas as pd
 
 def highlight_supertrend(row):
-    st_11 = row.get('ST_11')
-    st_10 = row.get('ST_10')
+    st_11 = row.get('ST 11')
+    st_10 = row.get('ST 10')
     close = row.get('close')
     
     styles = [''] * len(row)
     columns = list(row.index)
     
     if pd.notna(st_11) and pd.notna(close):
-        st_11_index = row.index.get_loc('ST_11')
+        st_11_index = row.index.get_loc('ST 11')
         if st_11 < close:
             styles[st_11_index] = 'background-color: lightgreen'
         elif st_11 > close:
             styles[st_11_index] = 'background-color: lightcoral'
 
     if pd.notna(st_10) and pd.notna(close):
-        st_10_index = row.index.get_loc('ST_10')
+        st_10_index = row.index.get_loc('ST 10')
         if st_10 < close:
             styles[st_10_index] = 'background-color: lightgreen'
         elif st_10 > close:
@@ -98,5 +98,18 @@ def highlight_supertrend(row):
         if row[cvd_col] == True:
             styles[idx] = 'font-weight: bold;'
     
+    arrow = '\u2191'
+    rsi_col = f'RSI{arrow} SML'
+    if rsi_col in columns:
+        idx = columns.index(rsi_col)
+        if row[rsi_col] == True:
+            styles[idx] = 'font-weight: bold;'
     
+    arrow = '\u2191'
+    ema_ma_col = f'EMA{arrow} MA'
+    if ema_ma_col in columns:
+        idx = columns.index(ema_ma_col)
+        if row[ema_ma_col] == True:
+            styles[idx] = 'font-weight: bold;'
+
     return styles

@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session as flask_session
-from fetchStrikeData import start_bot,fryersOrder
+from fetchStrikeData import start_bot,fryersOrder,print_bool_fields
 import pandas as pd
 from fetchStrikeData import getAuthCode
 from placeOrder import get_order_state
@@ -104,9 +104,14 @@ def get_data():
         print("⚙️ Using cached symbols:", ce, pe)
 
         # Call your bot logic
-        ce_table, ce_order_msg = start_bot(ce, token)
-        pe_table, pe_order_msg = start_bot(pe, token)
-
+        ce_table, ce_order_msg,df1 = start_bot(ce, token)
+        pe_table, pe_order_msg,df2 = start_bot(pe, token)
+        
+        print("CE Fields")
+        print_bool_fields(df1)
+        print("PE Fields")
+        print_bool_fields(df2)
+        
         return jsonify({
             'ce_table': ce_table,
             'pe_table': pe_table,

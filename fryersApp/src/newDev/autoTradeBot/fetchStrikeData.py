@@ -28,7 +28,7 @@ import numpy as np
 from highlight_row import highlight_supertrend
 from ta.momentum import RSIIndicator
 import ta
-
+import time
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
@@ -149,7 +149,7 @@ def maAngle(df):
 
 from ta.momentum import RSIIndicator
 
-def compute_rsi(df, price_col='close', period=14):
+def compute_rsi(df, price_col='close', period=14, smoothing_period=14):
     df = df.copy()
     
     # Compute RSI using Wilder’s method (ta lib matches TradingView)
@@ -159,6 +159,8 @@ def compute_rsi(df, price_col='close', period=14):
     # Add arrow column showing RSI rising
     arrow = '\u2191'
     df[f'RSI {arrow}'] = df['RSI'] > df['RSI'].shift(1)
+    df['RSI_Smooth'] = df['RSI'].rolling(window=smoothing_period).mean()
+    df[f'RSI{arrow} SML'] = df['RSI'] > df['RSI_Smooth']
     
     return df
 
@@ -219,6 +221,17 @@ def detect_ema9_bounce(df):
                      (~df['EMA9_support_bounce_base'].shift(1).fillna(True))
 
     return df
+
+from tabulate import tabulate
+
+def print_bool_fields(df):
+    """
+    Print all columns from the latest row (most recent candle) in key=value format.
+    """
+    latest_row = df.iloc[0]  # Most recent row (assuming df is sorted descending by time)
+    output = " | ".join(f"{col}={latest_row[col]}" for col in df.columns)
+    print(f"{output}")
+
 
 
 # the logic block
@@ -286,9 +299,10 @@ def start_bot(symb,auth_code):
 "               on a.symbol=b.symbol")
     df = dbdf.df()
     df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
+    df[f'EMA{arrow} MA'] = df['EMA9'] > df['MA20']
     # df = df.set_index('timestamp')
-    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','EMA9 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}','ATR','RSI']]. \
-                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
+    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','EMA9 SuP',f'EMA{arrow} MA',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}',f'RSI{arrow} SML','ATR','RSI']]. \
+                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST 11','supertrend10':'ST 10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
@@ -303,24 +317,25 @@ def start_bot(symb,auth_code):
     previous = df.iloc[1]
 
     ### entry conditions
-    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or latest['EMA9 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
-    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
-    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
-    # third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
+    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and previous[f'RSI{arrow} SML'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
+    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA']
+    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and previous['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
     
    
   
-    if (entry_trigger and first_block) or (entry_trigger and second_block) :
+    if (entry_trigger and first_block) or (entry_trigger and second_block) or third_block :
 
         stop_loss = 8
-        target = 10
+        target = 8
         qty = 75
         symbol = symb
         
         order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
+        if order_response.get("message") == "Successfully placed order":
+            time.sleep(3)
     else:
         order_response = {
-            "status": "skipped",
             "message": "Conditions not met for placing order."
         }
 
@@ -332,8 +347,8 @@ def start_bot(symb,auth_code):
                     )\
                     .to_html(table_attributes='class="table table-bordered table-hover table-sm w-100"')
 
-   
-    return styled_html,order_response
+    
+    return styled_html,order_response.get("message"),df
 
 
 

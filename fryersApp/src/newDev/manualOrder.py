@@ -5,10 +5,10 @@ from datetime import date
 from datetime import datetime
 
 # Replace with your actual access token
-ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb1pLdzliaGlOMTNTdTVoeEVzXzQwOVIxX3ZUVFJaUlYtUjkzSkNPd196OF91UzNZZkRUS3hQck82ZWhYRHJ1TlBYblVUMGQwMm1EWldmcUpIbkNMS2VuY01JeGpBUWgzc0dJR2xLV3hhWTZCOU13cz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxNTAyNjAwLCJpYXQiOjE3NTE0MjgxNTcsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTQyODE1Nywic3ViIjoiYWNjZXNzX3Rva2VuIn0.eU3k4Ue0kgj_2gPprDtaFb4Dj1lPbqPY4Qh66cdkv_k"
+# ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb1pLdzliaGlOMTNTdTVoeEVzXzQwOVIxX3ZUVFJaUlYtUjkzSkNPd196OF91UzNZZkRUS3hQck82ZWhYRHJ1TlBYblVUMGQwMm1EWldmcUpIbkNMS2VuY01JeGpBUWgzc0dJR2xLV3hhWTZCOU13cz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxNTAyNjAwLCJpYXQiOjE3NTE0MjgxNTcsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTQyODE1Nywic3ViIjoiYWNjZXNzX3Rva2VuIn0.eU3k4Ue0kgj_2gPprDtaFb4Dj1lPbqPY4Qh66cdkv_k"
 
 # Initialize Fyers API
-fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
+# fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
 # fyers.access_token = ACCESS_TOKEN
 # --- Order Config ---
 
@@ -73,7 +73,8 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
         order_state["active"] = True
         order_state["count"] += 1
         order_state["last_order_id"] = response.get("id")
-        return response.get("message")
+        s = response.get("message")
+        return s
     except Exception as e:
         print("Order Error:", e)
         return {"status": "error", "message": str(e)}
@@ -86,15 +87,15 @@ def place_bo_order(fyers, symbol, qty, stop_loss, target):
 
 if __name__ == '__main__':
     # Replace with your actual access token
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb1ozR205WHlHMzlVUG8yMkxaNW5jcTQ5NzE0c0pvcll0VWVmSnUwUzBwd1A0dXIwZURIMHVvNDBrWFFGeWdsZ1RpSWFIQzg0cEcwSlBoX1REdUZ2NDBkeEJiLW9COFYyLW9fdjh4NEg5bkswcDBZUT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUxNjc1NDAwLCJpYXQiOjE3NTE2MDk3NjYsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MTYwOTc2Niwic3ViIjoiYWNjZXNzX3Rva2VuIn0.2CctpHd5Vxd9hqLnD9qSCHSwrbEof8pYGfOqyLxATj8"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2NNdG94YUNENThvYnhUQ1pMTXBFSzZMVnlFR0FodTFvY0ZIOXkwQmE2WG9qSW9xUm1nUldQR05feWxIOXNKT0U1ZGNiM2t4b1U5YWI1dkg2LXJuSWo1dEJFaWRJLV9ZNXctRzBFTnBydmU0RERrMD0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMjgwMjAwLCJpYXQiOjE3NTIyMjI1NjgsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjIyMjU2OCwic3ViIjoiYWNjZXNzX3Rva2VuIn0.3vBfSMLVEJRMKT2jeEPGR0EDuNs6ZkL2fRjmpCPZc88"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
-    symbol = "NSE:NIFTY2571025450PE"     # Change to your desired symbol
+    symbol = "NSE:NIFTY2571725350PE"     # Change to your desired symbol
 
     qty = 75
     atr = 13
-    target = 10 if 8.50 <= atr <= 12 else 15 if atr > 12 else 8                             # 1 lot (75 quantity)
+    target = 10                    # 1 lot (75 quantity)
     # target = 10                  # 10-point target
     stop_loss = 3                 # 7-point stoploss
 
