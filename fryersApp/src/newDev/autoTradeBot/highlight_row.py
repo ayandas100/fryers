@@ -40,6 +40,16 @@ def highlight_supertrend(row):
         else:
             styles[idx] = 'background-color: lightblue;'
     
+    if 'EMA9 SuP' in columns:
+        idx = columns.index('EMA9 SuP')
+        if row['EMA9 SuP'] == True:
+            # current_style = styles.get(idx, "")
+            styles[idx] = 'font-weight: bold; background-color: darkgreen;'
+        else:
+            styles[idx] = 'background-color: lightblue;'
+
+
+
     arrow = '\u2191'
     st11col = f'ST11{arrow}'
     if st11col in columns:

@@ -195,6 +195,31 @@ def compute_cvd(df, close_col='close', volume_col='volume'):
     
     return df
 
+def detect_ema9_bounce(df):
+    df = df.copy()
+
+    # Step 1: Calculate EMA9
+    df['EMA9'] = df['close'].ewm(span=9, adjust=False).mean()
+
+    # Step 2: Shifted values for comparison
+    df['prev_close'] = df['close'].shift(1)
+    df['prev_low'] = df['low'].shift(1)
+    df['prev_ema9'] = df['EMA9'].shift(1)
+
+    # Step 3: Bounce Condition
+    df['EMA9_support_bounce_base'] = (
+        (df['prev_low'] <= df['prev_ema9']) &           # previous low dipped to or below EMA9
+        (df['prev_close'] > df['prev_ema9']) &          # previous close above EMA9
+        (df['close'] > df['open']) &                    # current candle is green
+        (df['close'] > df['EMA9'])                      # current close above EMA9
+    )
+
+    # Step 4: Fresh Bounce — no bounce in previous candle
+    df['EMA9 SuP'] = df['EMA9_support_bounce_base'] & \
+                     (~df['EMA9_support_bounce_base'].shift(1).fillna(True))
+
+    return df
+
 
 # the logic block
 def start_bot(symb,auth_code):
@@ -249,10 +274,11 @@ def start_bot(symb,auth_code):
                         (~df_candle['MA20_support_bounce_base'].shift(1).fillna(True))
                         # (~df_candle['20 CXover']) & \
                         # (~df_candle['20 CXover'].shift(1).fillna(False))
-    
+
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
     df_candle = compute_cvd(df_candle)
+    df_candle = detect_ema9_bounce(df_candle)
    
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
@@ -261,7 +287,7 @@ def start_bot(symb,auth_code):
     df = dbdf.df()
     df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}','ATR','RSI','CVD']]. \
+    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','EMA9 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}','ATR','RSI']]. \
                 rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
@@ -277,16 +303,16 @@ def start_bot(symb,auth_code):
     previous = df.iloc[1]
 
     ### entry conditions
-    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest['CVD'] > 0
-    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and latest[f'CVD {arrow}']
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or latest['EMA9 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
+    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}']
     second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}']
-    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 11.40 and latest[f'LTP {arrow}'] and latest['CVD'] > 0 and latest[f'CVD {arrow}']
+    # third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
     
    
   
-    if (entry_trigger and first_block) or (entry_trigger and second_block) or third_block:
+    if (entry_trigger and first_block) or (entry_trigger and second_block) :
 
-        stop_loss = 10
+        stop_loss = 8
         target = 10
         qty = 75
         symbol = symb
