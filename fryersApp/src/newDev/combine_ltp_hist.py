@@ -16,7 +16,7 @@ import pandas_ta as ta
 from autoTradeBot.symbolLoad import loadSymbol
 import numpy as np
 import ta
-
+from autoTradeBot.resistance import detect_pivots,find_sr_zones,extract_strong_resistance_with_original_range
 
 
 client_id = "15YI17TORX-100"
@@ -209,6 +209,33 @@ def compute_cvd(df, close_col='close', volume_col='volume'):
     
     return df
 
+
+
+def detect_ema9_bounce(df):
+    df = df.copy()
+
+    # Step 1: Calculate EMA9
+    df['EMA9'] = df['close'].ewm(span=9, adjust=False).mean()
+
+    # Step 2: Shifted values for comparison
+    df['prev_close'] = df['close'].shift(1)
+    df['prev_low'] = df['low'].shift(1)
+    df['prev_ema9'] = df['EMA9'].shift(1)
+
+    # Step 3: Bounce Condition
+    df['EMA9_support_bounce_base'] = (
+        (df['prev_low'] <= df['prev_ema9']) &           # previous low dipped to or below EMA9
+        (df['prev_close'] > df['prev_ema9']) &          # previous close above EMA9
+        (df['close'] > df['open']) &                    # current candle is green
+        (df['close'] > df['EMA9'])                      # current close above EMA9
+    )
+
+    # Step 4: Fresh Bounce — no bounce in previous candle
+    df['EMA9 SuP'] = df['EMA9_support_bounce_base'] & \
+                     (~df['EMA9_support_bounce_base'].shift(1).fillna(True))
+
+    return df
+
 def start_bot(symb,fyers):
     
     resp =  fryers_chain(fyers)
@@ -261,32 +288,61 @@ def start_bot(symb,fyers):
     df_candle = maAngle(df_candle)
     df_candle = compute_rsi(df_candle)
     df_candle = compute_cvd(df_candle)
+    df_candle = detect_ema9_bounce(df_candle)
+
+    df_resis = detect_pivots(df_candle)
+    df_resis = find_sr_zones(df_resis)
+    df_resis = extract_strong_resistance_with_original_range(df_resis)
 
     dbdf = db.query("select a.*,b.ltp " \
 "               from df_candle a" \
 "               join df_op b" \
 "               on a.symbol=b.symbol")
     df = dbdf.df()
+
+    dbdf1 = db.query("select a.*,b.Rlow,b.Rhigh from df a join df_resis b on a.symbol = b.symbol")
+    df = dbdf1.df()
+
     df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
     # df = df.set_index('timestamp')
-    df = df[['timestamp','close','ltp',f'LTP {arrow}','supertrend10','supertrend','20 CXover','MA20 SuP','Above ST11','Above ST10','ATR',f'ATR {arrow}','ma20SL_ge4','RSI',f'RSI {arrow}','CVD',f'CVD {arrow}']].rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST_11','supertrend10':'ST_10','20 CXover':'20 CXvr','ATR':'ATR (10)'})
+    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','EMA9 SuP',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ATR','RSI','Rlow','Rhigh']]. \
+                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST 11','supertrend10':'ST 10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
     # df = df.reset_index(drop=True)
     # df.index.name = None
     df = df.sort_values(by='Time', ascending=False)
     df = df.head(20)    
 
+    latest = df.iloc[0]
+    previous = df.iloc[1]
 
-    return print(df)
+    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
+    resis = (((latest['Rlow'] - latest['LTP']) > 15) or (latest['LTP'] > latest['Rhigh'])) and not (latest['LTP'] >= latest['Rlow'] and latest['LTP'] <= latest['Rhigh'])
+    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and previous[f'RSI{arrow} SML'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
+    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and  previous[f'RSI{arrow} SML']
+    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and previous['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
+    
+   
+    s = None
+    if (entry_trigger and first_block and resis) or (entry_trigger and second_block and resis) or (third_block and resis) :
+        s = "OK"
+    else:
+        order_response = {
+            "message": "Conditions not met for placing order."
+        }
+
+    
+
+    return print(df.head(5
+                         ))
 
 
 
 
 if __name__ == '__main__':
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2IwS1hBc1pRa2Ftb3psUGhZX1M0S2x1RklJMWx3dmpxd2xRcXU5Y0JXRDVqTHNxOXRaUV9yanhrekRlOEFIeENFSE90a1ZxYWFFc2RLOVd5SU5fYTlSLVR3TVR1ZHByblAwSUFvY1BNMUpXSnQ2bz0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMTkzODAwLCJpYXQiOjE3NTIxMjIwMDcsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjEyMjAwNywic3ViIjoiYWNjZXNzX3Rva2VuIn0.aTfEWjfWjJeCJSKXbXuFh8XTv_NIchtUX2yMIlMreww"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2NXRHFITzhBUzV0bU5FaFVjdmdBYTNvZDdhZzVOU1VuY2NidnJSdUJ0OW5jbGhPVzdXQm96ZVJtZG9iU2hPM04yR1IxWlhqUDR1MlJwOFRHUnlTWllNZC04di12OXNDLVp5UGkzQXJBWDRfaGtxWT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMzY2NjAwLCJpYXQiOjE3NTIyNjA4NDIsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjI2MDg0Miwic3ViIjoiYWNjZXNzX3Rva2VuIn0.X7fWAAabHX66SudzXxCI3Tm4rkcsxRH4vC13vr2eISA"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
-    symb1 = "NSE:NIFTY2571025350CE"
-    symbl2 = "NSE:NIFTY2571025550PE"
+    symb1 = "NSE:NIFTY2571725250PE"
     ce = start_bot(symb1,fyers)
     print(ce)

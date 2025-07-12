@@ -105,6 +105,28 @@ def find_sr_zones(df, channel_width_pct=5, loopback=290, min_strength=2, max_zon
     return zone_df.sort_values(by='zone_low').reset_index(drop=True)
 
 
+def extract_strong_resistance_with_original_range(zones_df):
+    """
+    Return only one strong resistance zone with its original zone_low and zone_high.
+    """
+    symbol = zones_df['symbol'].iloc[0] if 'symbol' in zones_df.columns else 'N/A'
+
+    resistance_zones = zones_df[
+        (zones_df['type'] == 'resistance') & (zones_df['label'] == 'strong')
+    ]
+
+    if not resistance_zones.empty:
+        resistance_zone = resistance_zones.loc[resistance_zones['zone_low'].idxmin()]
+        return pd.DataFrame([{
+            'symbol': symbol,
+            'Rlow': resistance_zone['zone_low'],
+            'Rhigh': resistance_zone['zone_high'],
+            'type': 'resistance'
+        }])
+
+    return pd.DataFrame()  # Return empty if no strong resistance found
+
+
 def start_bot(symb,fyers):
     
     resp =  fryers_chain(fyers)
@@ -132,17 +154,18 @@ def start_bot(symb,fyers):
 
     df = detect_pivots(df_candle, period=10)
     zones = find_sr_zones(df)
+    df = extract_strong_resistance_with_original_range(zones)
 
-    return print(zones)
+    return print(df_candle.head(5))
 
 
 
 
 if __name__ == '__main__':
-    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2NOTHJYWHFMUFplSG5zQ1FHM0JSUWZtaVBmem14blNXOGJHYTlCdUU3TkV6SmNobDlxTDRfVmRXTUNGNWFwVFk0NTdTd0lhSl9PUF9KOEdIQldteFMxMGk0QXJreVhYVlNMdzlHY1FVbDRrR05YND0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMjgwMjAwLCJpYXQiOjE3NTIyMjQ0OTEsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjIyNDQ5MSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.JP4dZCdw18KBJryRjju2bicS64F1W6FHATSwTAysa3k"
+    ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZDoxIiwiZDoyIiwieDowIiwieDoxIiwieDoyIl0sImF0X2hhc2giOiJnQUFBQUFCb2NnbVltTzVISTJWX3E5QTRGMkt6QmVnY013cXBJV01JX2JQc3I1WXdBTXNXdkdIeVRFUXlHVFdBTk1GZFFvMGhma0JudENhY0ktRmcwdXZFQzBTUVpTLWZEZVFlSm05TFRUV2EzdmxJT01Dd000RT0iLCJkaXNwbGF5X25hbWUiOiIiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJjYTU5M2UwOTRmZmIyMzBmZTNkMjdiNGY5NDA1Y2ZmOWM5ZmI2YzEzNjBmMDRjYTExMjY4OGMxMyIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImZ5X2lkIjoiWEE2NjkxMCIsImFwcFR5cGUiOjEwMCwiZXhwIjoxNzUyMzY2NjAwLCJpYXQiOjE3NTIzMDQwMjQsImlzcyI6ImFwaS5meWVycy5pbiIsIm5iZiI6MTc1MjMwNDAyNCwic3ViIjoiYWNjZXNzX3Rva2VuIn0.Ut7_ir7i53hI5oNdy6tm69MlEeFw2JFMyB9gMsyEJkM"
 
     # Initialize Fyers API
     fyers = fyersModel.FyersModel(client_id="15YI17TORX-100",token=ACCESS_TOKEN, log_path="")
-    symb1 = "NSE:NIFTY2571725350PE"
+    symb1 = "NSE:NIFTY2571725250PE"
     ce = start_bot(symb1,fyers)
     print(ce)

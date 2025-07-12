@@ -36,8 +36,8 @@ def fryers_chain(auth_code):
 
 def selectStrike(df):
     db.sql("CREATE OR REPLACE TABLE df_ltp AS SELECT * FROM df")  # DuckDB in-memory
-    dfd_ce = db.query("SELECT min(symbol) AS ce_sm FROM df_ltp WHERE ltp >= 150 AND ltp <= 250 AND option_type = 'CE'").df()
-    dfd_pe = db.query("SELECT max(symbol) AS pe_sm FROM df_ltp WHERE ltp >= 150 AND ltp <= 250 AND option_type = 'PE'").df()
+    dfd_ce = db.query("SELECT max(symbol) AS ce_sm FROM df_ltp WHERE ltp >= 150 AND ltp <= 250 AND option_type = 'CE'").df()
+    dfd_pe = db.query("SELECT min(symbol) AS pe_sm FROM df_ltp WHERE ltp >= 150 AND ltp <= 250 AND option_type = 'PE'").df()
 
     ce = dfd_ce.iloc[0, 0] if not dfd_ce.empty else None
     pe = dfd_pe.iloc[0, 0] if not dfd_pe.empty else None

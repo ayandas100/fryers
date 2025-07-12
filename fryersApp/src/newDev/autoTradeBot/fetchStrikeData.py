@@ -29,10 +29,12 @@ from highlight_row import highlight_supertrend
 from ta.momentum import RSIIndicator
 import ta
 import time
+from resistance import detect_pivots,find_sr_zones,extract_strong_resistance_with_original_range
+
 
 client_id = "15YI17TORX-100"
 today = date.today().strftime("%Y-%m-%d")
-yesterday = datetime.today() - timedelta(days=1)
+yesterday = datetime.today() - timedelta(days=10)
 yesterday = yesterday.strftime('%Y-%m-%d')
 
 
@@ -119,13 +121,6 @@ def fryersOrder(auth_code):
     fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path="")
     return fyers
 
-# def compute_atr(df, period=14):
-#     high_low = df['high'] - df['low']
-#     high_close = np.abs(df['high'] - df['close'].shift(1))
-#     low_close = np.abs(df['low'] - df['close'].shift(1))
-#     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-#     atr = tr.rolling(window=period).mean()
-#     return atr
 
 def angle(series, atr):
     rad2deg = 180 / np.pi
@@ -238,119 +233,156 @@ def print_bool_fields(df):
 
 # the logic block
 def start_bot(symb,auth_code):
-    
-    resp =  fryers_chain(auth_code)
-    # resp =  auth_code
-    # print(resp)
-    df_op = pd.DataFrame(resp["data"]["optionsChain"])
-    columns = ["symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
-    df_op = df_op[columns]
-    
-    ### read the data for selected strike price
-    #NSE:NIFTY2570325600CE 
-    ### read the data for selected strike price
-    #NSE:NIFTY2570325600CE 
-    
-    candle_data = fryers_hist(symb,auth_code)
-    columns_candle = ["timestamp", "open", "high", "low", "close", "volume"]
-    df_candle = pd.DataFrame(candle_data["candles"],columns=columns_candle)
-   
-    df_candle["timestamp"] = (
-        pd.to_datetime(df_candle["timestamp"], unit="s", utc=True)
-        .dt.tz_convert("Asia/Kolkata")
-        .dt.strftime("%m-%d %H:%M")
-    )
-
-    df_candle = df_candle.sort_values(by="timestamp").reset_index(drop=True)
-    df_candle.ta.supertrend(length=11, multiplier=2.0, append=True)
-    df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
-    df_candle["symbol"] = symb
-   
-    df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low','volume']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
-    df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
-
-    df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
-    df_candle.loc[:,'Above_MA20'] = df_candle['close'] > df_candle['MA20']
-    df_candle.loc[:, 'prev_Above_MA20'] = df_candle['Above_MA20'].shift(1)
-    df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
-    df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
-    df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
-    # #ATR calculations
-    df_candle = compute_atr(df_candle)
-    arrow = '\u2191'
-    df_candle[f'ATR {arrow}'] = df_candle['ATR'] > df_candle['ATR'].shift(1)
-    # MA 20 Bounce calculation
-    # arrow = '\u2191'
-    df_candle['prev_close'] = df_candle['close'].shift(1)
-    df_candle['prev_low'] = df_candle['low'].shift(1)
-    df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
-    df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
-    df_candle['MA20 SuP'] = df_candle['MA20_support_bounce_base'] & \
-                        (~df_candle['MA20_support_bounce_base'].shift(1).fillna(True))
-                        # (~df_candle['20 CXover']) & \
-                        # (~df_candle['20 CXover'].shift(1).fillna(False))
-
-    df_candle = maAngle(df_candle)
-    df_candle = compute_rsi(df_candle)
-    df_candle = compute_cvd(df_candle)
-    df_candle = detect_ema9_bounce(df_candle)
-   
-    dbdf = db.query("select a.*,b.ltp " \
-"               from df_candle a" \
-"               join df_op b" \
-"               on a.symbol=b.symbol")
-    df = dbdf.df()
-    df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
-    df[f'EMA{arrow} MA'] = df['EMA9'] > df['MA20']
-    # df = df.set_index('timestamp')
-    df = df[['timestamp','high','close','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','EMA9 SuP',f'EMA{arrow} MA',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}',f'RSI{arrow} SML','ATR','RSI']]. \
-                rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST 11','supertrend10':'ST 10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}'})
-    # df = df.reset_index(drop=True)
-    # df.index.name = None
-    df = df.sort_values(by='Time', ascending=False)
-    df = df.head(35)
-
-
-    fyers = fryersOrder(auth_code)
-    get_order_state()
-    check_order_status(fyers)
-
-    latest = df.iloc[0]
-    previous = df.iloc[1]
-
-    ### entry conditions
-    entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
-    first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and previous[f'RSI{arrow} SML'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
-    second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and  previous[f'RSI{arrow} SML']
-    third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and previous['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
-    
-   
-  
-    if (entry_trigger and first_block) or (entry_trigger and second_block) or third_block :
-
-        stop_loss = 8
-        target = 10
-        qty = 75
-        symbol = symb
+    try:
+        resp =  fryers_chain(auth_code)
+        # resp =  auth_code
+        # print(resp)
+        df_op = pd.DataFrame(resp["data"]["optionsChain"])
+        columns = ["symbol", "option_type", "strike_price", "ltp", "bid", "ask","volume"]
+        df_op = df_op[columns]
         
-        order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
-        if order_response.get("message") == "Successfully placed order":
-            time.sleep(3)
-    else:
-        order_response = {
-            "message": "Conditions not met for placing order."
-        }
-
+        ### read the data for selected strike price
+        #NSE:NIFTY2570325600CE 
+        ### read the data for selected strike price
+        #NSE:NIFTY2570325600CE 
+        
+        candle_data = fryers_hist(symb,auth_code)
+        columns_candle = ["timestamp", "open", "high", "low", "close", "volume"]
+        df_candle = pd.DataFrame(candle_data["candles"],columns=columns_candle)
     
-    styled_html = df.style.apply(highlight_supertrend, axis=1).format(precision=2)\
-                    .set_table_styles(
-                        [{'selector': 'td', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]},
-                        {'selector': 'th', 'props': [('white-space', 'normal'), ('word-wrap', 'break-word')]}]
-                    )\
-                    .to_html(table_attributes='class="table table-bordered table-hover table-sm w-100"')
+        df_candle["timestamp"] = (
+            pd.to_datetime(df_candle["timestamp"], unit="s", utc=True)
+            .dt.tz_convert("Asia/Kolkata")
+            .dt.strftime("%m-%d %H:%M")
+        )
 
+        df_candle = df_candle.sort_values(by="timestamp").reset_index(drop=True)
+        df_candle.ta.supertrend(length=11, multiplier=2.0, append=True)
+        df_candle.ta.supertrend(length=10, multiplier=1.0, append=True)
+        df_candle["symbol"] = symb
+        df_candle = df_candle[['symbol','timestamp','open','close','SUPERT_11_2.0','SUPERT_10_1.0','high','low','volume']].rename(columns={'SUPERT_11_2.0':'supertrend','SUPERT_10_1.0':'supertrend10'})
+        df_candle = df_candle.drop_duplicates(subset='timestamp', keep='first')
+
+        df_candle.loc[:, 'MA20'] = df_candle['close'].rolling(window=20).mean()
+        df_candle.loc[:,'Above_MA20'] = df_candle['close'] > df_candle['MA20']
+        df_candle.loc[:, 'prev_Above_MA20'] = df_candle['Above_MA20'].shift(1)
+        df_candle.loc[:,'20 CXover'] = (df_candle['Above_MA20'] == True) & (df_candle['prev_Above_MA20'] == False)
+        df_candle.loc[:,'Above ST11'] = df_candle['close'] > df_candle['supertrend']
+        df_candle.loc[:,'Above ST10'] = df_candle['close'] > df_candle['supertrend10']
+        
+        # #ATR calculations
+        df_candle = compute_atr(df_candle)
+        arrow = '\u2191'
+        df_candle[f'ATR {arrow}'] = df_candle['ATR'] > df_candle['ATR'].shift(1)
+        # MA 20 Bounce calculation
+        # arrow = '\u2191'
+        df_candle['prev_close'] = df_candle['close'].shift(1)
+        df_candle['prev_low'] = df_candle['low'].shift(1)
+        df_candle['prev_ma20'] = df_candle['MA20'].shift(1)
+        df_candle['MA20_support_bounce_base'] = ((df_candle['prev_low'] <= df_candle['prev_ma20']) & (df_candle['prev_close'] > df_candle['prev_ma20']) &  (df_candle['close'] > df_candle['open']) & (df_candle['close'] > df_candle['MA20']))
+        df_candle['MA20 SuP'] = df_candle['MA20_support_bounce_base'] & (~df_candle['MA20_support_bounce_base'].shift(1).fillna(True))
+
+        df_candle = maAngle(df_candle)
+        df_candle = compute_rsi(df_candle)
+        df_candle = compute_cvd(df_candle)
+        df_candle = detect_ema9_bounce(df_candle)
+
+        df_resis = detect_pivots(df_candle)
+        df_resis = find_sr_zones(df_resis)
+        df_resis = extract_strong_resistance_with_original_range(df_resis)
+        
+
+        dbdf = db.query("select a.*,b.ltp " \
+    "               from df_candle a" \
+    "               join df_op b" \
+    "               on a.symbol=b.symbol")
+        df = dbdf.df()
+        dbdf1 = db.query("select a.*,b.Rlow ,b.Rhigh from df a join df_resis b on a.symbol = b.symbol")
+        df = dbdf1.df()
+
+        df[f'LTP {arrow}'] = df['ltp'] > df['high'].shift(1)
+        df[f'EMA{arrow} MA'] = df['EMA9'] > df['MA20']
+        # df = df.set_index('timestamp')
+        df = df[['timestamp','high','close','low','ltp','supertrend10','supertrend','20 CXover','MA20 SuP','EMA9 SuP',f'EMA{arrow} MA',f'LTP {arrow}','Above ST11','Above ST10',f'ATR {arrow}',f'CVD {arrow}','ma20 SL4',f'RSI {arrow}',f'RSI{arrow} SML','ATR','RSI','Rlow','Rhigh']]. \
+                    rename(columns={'ltp':'LTP','timestamp':'Time','supertrend':'ST 11','supertrend10':'ST 10','20 CXover':'20 CXvr','ATR':'ATR','Above ST11':f'ST11{arrow}','Above ST10':f'ST10{arrow}','Rlow':'R LW','Rhigh':'R HG'})
+        df = df.reset_index(drop=True)
+        df.index.name = None
+        df = df.sort_values(by='Time', ascending=False)
+        df = df.head(35)
+        
+        ### FINAL DATAFRAME
+        df_final = df[["Time","high","low","close","LTP"]].copy()
+        df_final["condition_matched"] = None
+        df_final["Order_Placed"] = None
+        df_final = df_final[["Time","high","low","close","LTP","condition_matched","Order_Placed"]].rename(columns={'Time':'TIME','high':'HIGH','low':'LOW','close':'CLOSE','LTP':'LTP','condition_matched':'CONDITION MATCHED','Order_Placed':'ORDER PLACED'})
+        # df_final["HIGH"] = df_final["HIGH"].astype(float).round(2)
+        # df_final["LOW"] = df_final["LOW"].fillna(0).round(2)
+        # df_final["CLOSE"] = df_final["CLOSE"].fillna(0).round(2)
+        # df_final["LTP"] = df_final["LTP"].fillna(0).round(2)
+
+        fyers = fryersOrder(auth_code)
+        get_order_state()
+        check_order_status(fyers)
+
+        latest = df.iloc[0]   
+        previous = df.iloc[1]
+
+        ### entry conditions
+        entry_trigger = (previous['20 CXvr'] or previous['MA20 SuP'] or latest['20 CXvr'] or latest['MA20 SuP'] or previous['EMA9 SuP']) and latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest[f'LTP {arrow}'] and latest[f'CVD {arrow}']
+        # resis = (((latest['Rlow'] - latest['LTP']) > 5) or (latest['LTP'] > latest['Rhigh'] + 5)) and not (latest['LTP'] >= latest['Rlow'] and latest['LTP'] <= latest['Rhigh'])
+        resis = (latest['LTP'] >= (latest['R LW'] - 5) and latest['LTP'] <= (latest['R HG'] + 5))
+        first_block = latest['ATR'] >= 8.40 and latest[f'ATR {arrow}'] and latest['ma20 SL4'] and latest[f'RSI {arrow}'] and previous[f'RSI{arrow} SML'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
+        second_block = latest['RSI'] >= 63 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and  previous[f'RSI{arrow} SML']
+        third_block = latest[f'ST11{arrow}'] and latest[f'ST10{arrow}'] and latest['RSI'] >= 70 and previous['RSI'] >= 68 and latest[f'RSI {arrow}'] and latest[f'ATR {arrow}'] and latest['ATR'] >= 12 and latest[f'LTP {arrow}'] \
+                        and latest[f'CVD {arrow}'] and latest[f'RSI{arrow} SML'] and latest[f'EMA{arrow} MA'] and previous[f'EMA{arrow} MA']
+        
+        condition1 = (entry_trigger and first_block and not resis)
+        condition2 = (entry_trigger and second_block and not resis)
+        condition3 = (third_block and not resis)
+        
+        if  condition1 or condition2 or condition3 :
+            
+            df_final.loc[df_final.index[0], "CONDITION MATCHED"] = ("condition1" if condition1 else "condition2" if condition2 else "condition3")
+            
+            stop_loss = 8
+            target = 10
+            qty = 75
+            symbol = symb
+            
+            order_response = place_bo_order(fyers, symbol, qty, stop_loss, target)
+            if order_response.get("message") == "Successfully placed order":
+                df_final.loc[df_final.index[0], "ORDER PLACED"] = "Yes"
+                time.sleep(3)
+        else:
+            order_response = {
+                "message": "Conditions not met for placing order."
+            }
+         
+        order_response = order_response.get("message")
+
+        styled_html = df_final.style\
+            .apply(lambda row: ['background-color: lightgreen'] * len(row) if row['CONDITION MATCHED'] not in [None, 'None', ''] else [''] * len(row), axis=1)\
+            .set_table_styles([
+                {'selector': 'th', 'props': [('font-weight', 'bold'), ('text-align', 'center'),('word-wrap', 'break-word')]},
+                {'selector': 'thead th', 'props': [('text-align', 'center')]}
+            ])\
+            .format({
+            'HIGH': '{:.2f}',
+            'LOW': '{:.2f}',
+            'CLOSE': '{:.2f}',
+            'LTP': '{:.2f}'
+            })\
+            .to_html(classes="table table-bordered table-hover table-sm w-100", index=False)
+
+
+        # styled_html = 's'
+        # order_response = 'm'
+        
+        return styled_html,order_response,df
+    except Exception as e:
+        return "", f"Exception: {str(e)}", pd.DataFrame()
     
-    return styled_html,order_response.get("message"),df
+    
 
 
 

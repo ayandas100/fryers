@@ -15,7 +15,7 @@ from symbolLoad import loadSymbol
 from datetime import datetime
 import time
 import threading
-
+import webbrowser
 
 
 app = Flask(__name__)
@@ -104,23 +104,25 @@ def get_data():
         print("⚙️ Using cached symbols:", ce, pe)
 
         # Call your bot logic
-        ce_table, ce_order_msg,df1 = start_bot(ce, token)
-        pe_table, pe_order_msg,df2 = start_bot(pe, token)
-        
-        print("CE Fields")
-        print_bool_fields(df1)
-        print("PE Fields")
-        print_bool_fields(df2)
-        
-        return jsonify({
-            'ce_table': ce_table,
-            'pe_table': pe_table,
-            'ce_symbol': ce,
-            'pe_symbol': pe,
-            'ce_order_msg': ce_order_msg,
-            'pe_order_msg': pe_order_msg
-        })
-
+        try:
+            ce_table, ce_order_msg,df1 = start_bot(ce, token)
+            pe_table, pe_order_msg,df2 = start_bot(pe, token)
+            
+            print("CE Fields")
+            print_bool_fields(df1)
+            print("PE Fields")
+            print_bool_fields(df2)
+            
+            return jsonify({
+                'ce_table': ce_table,
+                'pe_table': pe_table,
+                'ce_symbol': ce,
+                'pe_symbol': pe,
+                'ce_order_msg': ce_order_msg,
+                'pe_order_msg': pe_order_msg
+            })
+        except Exception as e:
+            return jsonify({'error': f'start_bot failed: {str(e)}'})
     except Exception as e:
         return jsonify({'error': str(e)})
 
@@ -172,7 +174,7 @@ def wait_until_market_opens():
     while True:
         now = datetime.now().time()
         start_time = datetime.strptime("09:15", "%H:%M").time()
-        end_time = datetime.strptime("21:14", "%H:%M").time()
+        end_time = datetime.strptime("16:14", "%H:%M").time()
 
         # Check if it's after 9:15 AND token is available
         if start_time <= now <= end_time and token:
@@ -195,4 +197,6 @@ def wait_until_market_opens():
 if __name__ == '__main__':
 
     threading.Thread(target=auto_shutdown, daemon=True).start()
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        webbrowser.open("http://127.0.0.1:5000")
     app.run(debug=True)
